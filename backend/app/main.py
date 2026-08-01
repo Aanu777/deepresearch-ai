@@ -1,11 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI
+
 from app.api.v1.health import router as health_router
-
-app = FastAPI(title="DeepResearch AI")
-
-app.include_router(health_router, prefix="/api/v1")
+from app.api.v1.research import router as research_router
 
 app = FastAPI(
     title="DeepResearch AI",
@@ -23,6 +20,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(
+    health_router,
+    prefix="/api/v1",
+)
+
+app.include_router(
+    research_router,
+    prefix="/api/v1",
+)
+
 @app.get("/")
 async def root():
     return {
@@ -30,7 +37,7 @@ async def root():
     }
 
 @app.get("/health")
-async def health():
+async def root_health():
     return {
         "status": "healthy"
     }
