@@ -1,13 +1,24 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.health import router as health_router
 from app.api.v1.research import router as research_router
+from app.api.v1.conversations import router as conversations_router
+
+
+# ============================================================
+# APPLICATION
+# ============================================================
 
 app = FastAPI(
     title="DeepResearch AI",
+    description="Autonomous AI-powered research platform.",
     version="1.0.0",
 )
+
+
+# ============================================================
+# CORS
+# ============================================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -20,24 +31,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(
-    health_router,
-    prefix="/api/v1",
-)
 
-app.include_router(
-    research_router,
-    prefix="/api/v1",
-)
+# ============================================================
+# ROOT
+# ============================================================
 
 @app.get("/")
 async def root():
+
     return {
-        "message": "DeepResearch AI Backend Running 🚀"
+        "name": "DeepResearch AI",
+        "status": "online",
+        "version": "1.0.0",
     }
 
-@app.get("/health")
-async def root_health():
-    return {
-        "status": "healthy"
-    }
+
+# ============================================================
+# RESEARCH API
+# ============================================================
+
+app.include_router(
+    research_router,
+    prefix="/api/v1/research",
+    tags=["Research"],
+)
+
+
+# ============================================================
+# CHAT API
+# ============================================================
+
+app.include_router(
+    conversations_router,
+    prefix="/api/v1/conversations",
+    tags=["Conversations"],
+)
