@@ -1,0 +1,7 @@
+[project]
+name = "deepresearch-ai"
+version = "1.0.0"
+requires-python = ">=3.14"
+
+[tool.fastapi]
+entrypoint = "app.main:app"
