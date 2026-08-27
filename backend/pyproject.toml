@@ -1,7 +1,17 @@
 [project]
 name = "deepresearch-ai"
 version = "1.0.0"
-requires-python = ">=3.14"
+description = "Autonomous AI-powered research platform"
+requires-python = "==3.12.*"
+dependencies = [
+    "fastapi[standard]==0.141.1",
+    "pydantic==2.13.4",
+    "pydantic-settings==2.14.2",
+    "sqlalchemy==2.0.51",
+    "httpx==0.28.1",
+    "python-dotenv==1.2.2",
+    "uvicorn==0.52.0",
+]
 
 [tool.fastapi]
 entrypoint = "app.main:app"
