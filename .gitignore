@@ -31,3 +31,6 @@ Thumbs.db
 .vscode/
 .idea/
 "@ | Set-Content .gitignore
+backend/.env
+
+backend/.env
