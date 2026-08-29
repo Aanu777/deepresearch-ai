@@ -1,73 +1,50 @@
-# DeepResearch AI
 
-> **An autonomous AI-powered research platform that transforms complex questions into structured, evidence-driven research reports.**
+# DeepResearch
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)](https://www.python.org/)
-[![Supabase](https://img.shields.io/badge/Supabase-Auth%20%26%20Data-3ECF8E?logo=supabase)](https://supabase.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
+> A multi-agent AI research system designed to break complex research tasks into smaller problems, investigate them, verify findings, and produce structured reports.
+
+![DeepResearch](https://img.shields.io/badge/DeepResearch-AI%20Research%20System-06b6d4?style=for-the-badge)
+![Next.js](https://img.shields.io/badge/Next.js-TypeScript-black?style=flat-square&logo=next.js)
+![Python](https://img.shields.io/badge/Python-Backend-3776AB?style=flat-square&logo=python)
+![AI Agents](https://img.shields.io/badge/Architecture-Multi--Agent-purple?style=flat-square)
 
 ---
 
 ## Overview
 
-**DeepResearch AI** is a full-stack AI research platform designed to automate the research workflow from question to final report.
+DeepResearch is an AI-powered research system built around a **multi-agent architecture**.
 
-Instead of requiring users to manually search through dozens of sources, collect information, compare findings, and organize the results, DeepResearch AI is designed around an autonomous research pipeline that can take a research question and transform it into a structured research result.
+Instead of relying on a single AI model to perform an entire research task, DeepResearch divides the workflow between specialized agents.
 
-The platform combines:
-
-- AI-powered research
-- Web search
-- Structured research workflows
-- Conversational follow-up questions
-- Research history
-- Source collection
-- Timeline tracking
-- Research metrics
-- AI-generated summaries
-- PDF-based research input
-- Secure authentication
-- Persistent user conversations
-- Modern SaaS-style workspace UI
-
-The goal is simple:
-
-> **Turn a complex research question into an organized, evidence-driven answer with minimal manual effort.**
-
----
-
-# ✨ Features
-
-## 🔬 Autonomous Research
-
-Users can submit a research question and start an AI-powered research job.
-
-The backend processes the request through the research pipeline and returns a structured research result instead of simply generating a single conversational response.
-
-### Research workflow
+A typical research task moves through:
 
 ```text
-User Question
+User Query
+    │
+    ▼
+┌─────────┐
+│ Planner │
+└────┬────┘
+     │
+     ▼
+┌─────────┐
+│ Searcher│
+└────┬────┘
+     │
+     ▼
+┌───────────┐
+│ Reflection│
+└─────┬─────┘
       │
       ▼
-Research Job
-      │
-      ▼
-Research Pipeline
-      │
-      ├── Information Gathering
-      │
-      ├── Source Collection
-      │
-      ├── Analysis
-      │
-      ├── Synthesis
-      │
-      └── Report Generation
-      │
-      ▼
-Structured Research Result
+┌─────────┐
+│ Verifier│
+└────┬────┘
+     │
+     ▼
+┌────────┐
+│ Writer │
+└────┬───┘
+     │
+     ▼
+Research Report
