@@ -17,11 +17,11 @@ const links = [
   },
   {
     name: "Research",
-    href: "#research",
+    href: "/workspace",
   },
   {
     name: "Docs",
-    href: "#docs",
+    href: "/docs",
   },
 ];
 

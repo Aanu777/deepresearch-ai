@@ -49,7 +49,7 @@ const pipeline = [
 
 export default function Architecture() {
   return (
-    <Section>
+    <Section id="architecture">
       <Heading
         eyebrow="Research Pipeline"
         title="How DeepResearch Thinks"

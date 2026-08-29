@@ -60,7 +60,7 @@ const cards = [
 
 export default function Features() {
   return (
-    <Section>
+    <Section id="features">
 
       {/* ====================================================== */}
       {/* HEADER */}
