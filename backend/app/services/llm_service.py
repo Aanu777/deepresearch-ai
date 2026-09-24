@@ -1,8 +1,13 @@
+import logging
+
 from typing import Any
 
 from openai import OpenAI
 
 from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class LLMService:
@@ -77,16 +82,31 @@ class LLMService:
             messages
         )
 
-        response = (
-            self.client.chat.completions.create(
-                model=(
-                    model
-                    or settings.OPENROUTER_MODEL
-                ),
-                messages=prepared_messages,  # type: ignore[arg-type]
-                temperature=temperature,
-            )
+        selected_model = (
+            model
+            or settings.OPENROUTER_MODEL
         )
+
+        try:
+
+            response = (
+                self.client.chat.completions.create(
+                    model=selected_model,
+                    messages=prepared_messages,  # type: ignore[arg-type]
+                    temperature=temperature,
+                )
+            )
+
+        except Exception:
+
+            logger.exception(
+                "OpenRouter chat completion failed "
+                "(model=%s, message_count=%s).",
+                selected_model,
+                len(prepared_messages),
+            )
+
+            raise
 
         content = (
             response
