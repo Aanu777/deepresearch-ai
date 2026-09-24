@@ -1446,7 +1446,7 @@ export default function ConversationComposer() {
         via-[#050505]
         to-transparent
 
-        px-3
+        px-2.5
         pb-3
         pt-2
 
@@ -1468,7 +1468,8 @@ export default function ConversationComposer() {
 
         <div
           className={`
-            rounded-[28px]
+            rounded-[24px]
+            sm:rounded-[28px]
 
             border
 
@@ -1503,6 +1504,7 @@ export default function ConversationComposer() {
               <div
                 className="
                   flex
+                  w-full
                   max-w-[320px]
                   items-center
                   gap-2.5
