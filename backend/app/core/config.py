@@ -39,6 +39,10 @@ class Settings(BaseSettings):
 
     OPENROUTER_MAX_HISTORY_MESSAGES: int = 24
 
+    OPENROUTER_FALLBACK_MODEL: str = (
+        "openrouter/free"
+    )
+
     # ========================================================
     # VISION — OPENROUTER
     # ========================================================

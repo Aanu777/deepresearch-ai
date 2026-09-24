@@ -20,9 +20,23 @@ import {
   useResearch,
 } from "@/components/context/ResearchContext";
 
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
 import TemplatePicker from "./TemplatePicker";
 
 export default function PromptBox() {
+  const router =
+    useRouter();
+
+  const supabase =
+    createClient();
+
   const [
     prompt,
     setPrompt,
@@ -190,6 +204,21 @@ export default function PromptBox() {
         !trimmed
       )
     ) {
+      return;
+    }
+
+    const {
+      data: {
+        session,
+      },
+    } =
+      await supabase.auth.getSession();
+
+    if (!session) {
+      router.push(
+        "/login"
+      );
+
       return;
     }
 
