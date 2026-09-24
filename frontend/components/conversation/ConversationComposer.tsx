@@ -26,6 +26,14 @@ import {
   type ConversationActivity,
 } from "@/components/context/ConversationContext";
 
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
 
 /* ============================================================
    TYPES
@@ -74,6 +82,11 @@ const MAX_TEXTAREA_HEIGHT =
    ============================================================ */
 
 export default function ConversationComposer() {
+  const router =
+    useRouter();
+
+  const supabase =
+    createClient();
 
   /* ==========================================================
      LOCAL STATE
@@ -468,6 +481,21 @@ export default function ConversationComposer() {
 
 
     clearConversationError();
+
+    const {
+      data: {
+        session,
+      },
+    } =
+      await supabase.auth.getSession();
+
+    if (!session) {
+      router.push(
+        "/login"
+      );
+
+      return;
+    }
 
 
     /* ========================================================
