@@ -2,6 +2,7 @@
 
 import {
   ReactNode,
+  useEffect,
   useState,
 } from "react";
 
@@ -24,8 +25,25 @@ export default function AppShell({
     setMobileOpen,
   ] = useState(false);
 
+  useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [mobileOpen]);
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white">
+    <div className="min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white">
       <Sidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
@@ -44,7 +62,9 @@ export default function AppShell({
 
       <main
         className={[
-          "min-h-screen",
+          "min-h-[100dvh]",
+          "min-w-0",
+          "overflow-x-hidden",
           "bg-[#050505]",
           "transition-[margin-left]",
           "duration-200",
