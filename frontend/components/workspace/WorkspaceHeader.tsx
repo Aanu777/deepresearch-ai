@@ -99,8 +99,11 @@ export default function WorkspaceHeader() {
           max-w-[1200px]
           items-center
           justify-between
-          px-4
-          sm:px-6
+          pl-16
+          pr-4
+          sm:pl-16
+          sm:pr-6
+          lg:px-6
         "
       >
         {/* PRODUCT */}
