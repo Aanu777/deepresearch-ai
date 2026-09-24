@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
+
 from app.api.v1.research import router as research_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.websocket import router as websocket_router
@@ -21,13 +23,17 @@ app = FastAPI(
 # CORS
 # ============================================================
 
+cors_origins = [
+    origin.strip()
+    for origin in settings.CORS_ORIGINS.split(",")
+    if origin.strip()
+]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://deepresearch-ai-nu.vercel.app",
-    ],
+    allow_origins=cors_origins,
+    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
