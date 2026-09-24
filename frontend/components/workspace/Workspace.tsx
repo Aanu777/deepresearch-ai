@@ -15,12 +15,14 @@ export default function Workspace() {
           mx-auto
           w-full
           max-w-[1000px]
-          px-4
-          pb-20
-          pt-8
+          px-3
+          pb-16
+          pt-6
           sm:px-6
-          sm:pt-10
+          sm:pb-20
+          sm:pt-8
           lg:px-8
+          lg:pt-10
         "
       >
         {/* RESEARCH INPUT */}
@@ -35,7 +37,7 @@ export default function Workspace() {
               className="
                 mt-2
                 max-w-3xl
-                text-2xl
+                text-[1.65rem]
                 font-semibold
                 tracking-[-0.03em]
                 text-white
