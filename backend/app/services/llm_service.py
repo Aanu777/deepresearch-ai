@@ -137,11 +137,12 @@ class LLMService:
             or settings.OPENROUTER_MODEL
         )
 
-        try:
-
-            response = (
+        def create_completion(
+            model_name: str,
+        ):
+            return (
                 self.client.chat.completions.create(
-                    model=selected_model,
+                    model=model_name,
                     messages=prepared_messages,  # type: ignore[arg-type]
                     temperature=temperature,
                     max_tokens=(
@@ -149,6 +150,11 @@ class LLMService:
                         .OPENROUTER_MAX_TOKENS
                     ),
                 )
+            )
+
+        try:
+            response = create_completion(
+                selected_model
             )
 
         except APIStatusError as exc:
@@ -161,66 +167,65 @@ class LLMService:
                 exc.status_code,
             )
 
-            if (
-                exc.status_code
-                == 402
-            ):
-                raise LLMProviderError(
-                    (
-                        "The AI service does not have "
-                        "enough provider credit for "
-                        "this request."
-                    ),
-                    status_code=503,
-                ) from exc
+            fallback_model = (
+                settings
+                .OPENROUTER_FALLBACK_MODEL
+            )
 
             if (
-                exc.status_code
-                == 429
+                exc.status_code == 402
+                and fallback_model
+                and selected_model
+                != fallback_model
             ):
-                raise LLMProviderError(
-                    (
-                        "The AI service is temporarily "
-                        "rate-limited. Please try again."
-                    ),
-                    status_code=429,
-                ) from exc
+                logger.warning(
+                    "Retrying OpenRouter request with "
+                    "fallback model after credit failure "
+                    "(primary_model=%s, fallback_model=%s).",
+                    selected_model,
+                    fallback_model,
+                )
 
-            if (
-                exc.status_code
-                in {
-                    401,
-                    403,
-                }
-            ):
-                raise LLMProviderError(
-                    (
-                        "The AI service is temporarily "
-                        "unavailable because provider "
-                        "authentication failed."
-                    ),
-                    status_code=503,
-                ) from exc
+                selected_model = (
+                    fallback_model
+                )
 
-            if (
-                exc.status_code
-                >= 500
-            ):
-                raise LLMProviderError(
-                    (
-                        "The AI provider is temporarily "
-                        "unavailable. Please try again."
-                    ),
-                    status_code=503,
-                ) from exc
+                try:
+                    response = (
+                        create_completion(
+                            selected_model
+                        )
+                    )
 
-            raise LLMProviderError(
-                (
-                    "The AI provider rejected "
-                    "the request."
-                ),
-                status_code=502,
-            ) from exc
+                except APIStatusError as fallback_exc:
+                    self._raise_provider_error(
+                        fallback_exc,
+                        selected_model,
+                        len(prepared_messages),
+                    )
+
+                except Exception as fallback_exc:
+                    logger.exception(
+                        "OpenRouter fallback request failed "
+                        "(model=%s, message_count=%s).",
+                        selected_model,
+                        len(prepared_messages),
+                    )
+
+                    raise LLMProviderError(
+                        (
+                            "The AI service request failed. "
+                            "Please try again."
+                        ),
+                        status_code=503,
+                    ) from fallback_exc
+
+            else:
+                self._raise_provider_error(
+                    exc,
+                    selected_model,
+                    len(prepared_messages),
+                )
 
         except Exception as exc:
 
@@ -249,6 +254,70 @@ class LLMService:
         return self._normalize_content(
             content
         )
+
+    @staticmethod
+    def _raise_provider_error(
+        exc: APIStatusError,
+        model_name: str,
+        message_count: int,
+    ) -> None:
+
+        logger.exception(
+            "OpenRouter chat completion failed "
+            "(model=%s, message_count=%s, status=%s).",
+            model_name,
+            message_count,
+            exc.status_code,
+        )
+
+        if exc.status_code == 402:
+            raise LLMProviderError(
+                (
+                    "The AI service is temporarily "
+                    "unavailable because no provider "
+                    "capacity is available for this request."
+                ),
+                status_code=503,
+            ) from exc
+
+        if exc.status_code == 429:
+            raise LLMProviderError(
+                (
+                    "The AI service is temporarily "
+                    "rate-limited. Please try again."
+                ),
+                status_code=429,
+            ) from exc
+
+        if exc.status_code in {
+            401,
+            403,
+        }:
+            raise LLMProviderError(
+                (
+                    "The AI service is temporarily "
+                    "unavailable because provider "
+                    "authentication failed."
+                ),
+                status_code=503,
+            ) from exc
+
+        if exc.status_code >= 500:
+            raise LLMProviderError(
+                (
+                    "The AI provider is temporarily "
+                    "unavailable. Please try again."
+                ),
+                status_code=503,
+            ) from exc
+
+        raise LLMProviderError(
+            (
+                "The AI provider rejected "
+                "the request."
+            ),
+            status_code=502,
+        ) from exc
 
     # ========================================================
     # NORMALIZE OUTPUT
