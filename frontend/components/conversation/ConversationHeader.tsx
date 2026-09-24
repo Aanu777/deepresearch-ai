@@ -28,9 +28,12 @@ export default function ConversationHeader() {
         border-b
         border-white/[0.06]
         bg-[#050505]/95
-        px-4
+        pl-16
+        pr-4
         backdrop-blur-xl
-        sm:px-5
+        sm:pl-16
+        sm:pr-5
+        lg:px-5
       "
     >
       {/* LEFT */}
