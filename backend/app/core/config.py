@@ -35,6 +35,10 @@ class Settings(BaseSettings):
         "llama-3.3-70b-instruct"
     )
 
+    OPENROUTER_MAX_TOKENS: int = 1024
+
+    OPENROUTER_MAX_HISTORY_MESSAGES: int = 24
+
     # ========================================================
     # VISION — OPENROUTER
     # ========================================================
