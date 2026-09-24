@@ -35,6 +35,10 @@ class Settings(BaseSettings):
         "llama-3.3-70b-instruct"
     )
 
+    OPENROUTER_MAX_TOKENS: int = 1024
+
+    OPENROUTER_MAX_HISTORY_MESSAGES: int = 24
+
     # ========================================================
     # VISION — OPENROUTER
     # ========================================================
@@ -75,6 +79,22 @@ class Settings(BaseSettings):
 
     POLLINATIONS_IMAGE_EDIT_MODEL: str = (
         "kontext"
+    )
+
+    # ========================================================
+    # CORS
+    # ========================================================
+
+    CORS_ORIGINS: str = (
+        "http://localhost:3000,"
+        "http://127.0.0.1:3000,"
+        "https://deepresearch-ai-nu.vercel.app,"
+        "https://deepresearch-ai-ayan-a664.vercel.app,"
+        "https://deepresearch-ai-git-main-ayan-a664.vercel.app"
+    )
+
+    CORS_ORIGIN_REGEX: str = (
+        r"^https://deepresearch-[a-z0-9-]+-ayan-a664\.vercel\.app$"
     )
 
     # ========================================================

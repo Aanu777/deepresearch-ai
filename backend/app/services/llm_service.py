@@ -1,8 +1,31 @@
+import logging
+
 from typing import Any
 
-from openai import OpenAI
+from openai import APIStatusError, OpenAI
 
 from app.core.config import settings
+
+
+logger = logging.getLogger(__name__)
+
+
+class LLMProviderError(RuntimeError):
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status_code: int = 503,
+    ) -> None:
+
+        super().__init__(
+            message
+        )
+
+        self.status_code = (
+            status_code
+        )
 
 
 class LLMService:
@@ -73,20 +96,148 @@ class LLMService:
                 }
             )
 
-        prepared_messages.extend(
-            messages
+        history_limit = max(
+            1,
+            settings.OPENROUTER_MAX_HISTORY_MESSAGES,
         )
 
-        response = (
-            self.client.chat.completions.create(
-                model=(
-                    model
-                    or settings.OPENROUTER_MODEL
-                ),
-                messages=prepared_messages,  # type: ignore[arg-type]
-                temperature=temperature,
+        system_messages = [
+            message
+            for message in messages
+            if message.get("role") == "system"
+        ]
+
+        non_system_messages = [
+            message
+            for message in messages
+            if message.get("role") != "system"
+        ]
+
+        if (
+            len(non_system_messages)
+            > history_limit
+        ):
+            non_system_messages = (
+                non_system_messages[
+                    -history_limit:
+                ]
             )
+
+        if has_system_message:
+            prepared_messages.extend(
+                system_messages[:1]
+            )
+
+        prepared_messages.extend(
+            non_system_messages
         )
+
+        selected_model = (
+            model
+            or settings.OPENROUTER_MODEL
+        )
+
+        try:
+
+            response = (
+                self.client.chat.completions.create(
+                    model=selected_model,
+                    messages=prepared_messages,  # type: ignore[arg-type]
+                    temperature=temperature,
+                    max_tokens=(
+                        settings
+                        .OPENROUTER_MAX_TOKENS
+                    ),
+                )
+            )
+
+        except APIStatusError as exc:
+
+            logger.exception(
+                "OpenRouter chat completion failed "
+                "(model=%s, message_count=%s, status=%s).",
+                selected_model,
+                len(prepared_messages),
+                exc.status_code,
+            )
+
+            if (
+                exc.status_code
+                == 402
+            ):
+                raise LLMProviderError(
+                    (
+                        "The AI service does not have "
+                        "enough provider credit for "
+                        "this request."
+                    ),
+                    status_code=503,
+                ) from exc
+
+            if (
+                exc.status_code
+                == 429
+            ):
+                raise LLMProviderError(
+                    (
+                        "The AI service is temporarily "
+                        "rate-limited. Please try again."
+                    ),
+                    status_code=429,
+                ) from exc
+
+            if (
+                exc.status_code
+                in {
+                    401,
+                    403,
+                }
+            ):
+                raise LLMProviderError(
+                    (
+                        "The AI service is temporarily "
+                        "unavailable because provider "
+                        "authentication failed."
+                    ),
+                    status_code=503,
+                ) from exc
+
+            if (
+                exc.status_code
+                >= 500
+            ):
+                raise LLMProviderError(
+                    (
+                        "The AI provider is temporarily "
+                        "unavailable. Please try again."
+                    ),
+                    status_code=503,
+                ) from exc
+
+            raise LLMProviderError(
+                (
+                    "The AI provider rejected "
+                    "the request."
+                ),
+                status_code=502,
+            ) from exc
+
+        except Exception as exc:
+
+            logger.exception(
+                "OpenRouter chat completion failed "
+                "(model=%s, message_count=%s).",
+                selected_model,
+                len(prepared_messages),
+            )
+
+            raise LLMProviderError(
+                (
+                    "The AI service request failed. "
+                    "Please try again."
+                ),
+                status_code=503,
+            ) from exc
 
         content = (
             response

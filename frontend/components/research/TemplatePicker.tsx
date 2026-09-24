@@ -14,6 +14,7 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 export type ResearchTemplate = {
@@ -21,7 +22,7 @@ export type ResearchTemplate = {
   title: string;
   description: string;
   prompt: string;
-  icon: React.ElementType;
+  icon: LucideIcon;
   category: string;
 };
 

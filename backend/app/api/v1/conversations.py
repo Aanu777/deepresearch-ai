@@ -36,6 +36,7 @@ from app.services.job_store import (
 )
 
 from app.services.llm_service import (
+    LLMProviderError,
     llm_service,
 )
 
@@ -1640,6 +1641,19 @@ async def send_message(
             ),
         )
 
+        if isinstance(
+            exc,
+            LLMProviderError,
+        ):
+            raise HTTPException(
+                status_code=(
+                    exc.status_code
+                ),
+                detail=str(
+                    exc
+                ),
+            ) from exc
+
         raise HTTPException(
             status_code=500,
             detail=(
@@ -1993,6 +2007,19 @@ async def edit_message(
             chat
         )
 
+        if isinstance(
+            exc,
+            LLMProviderError,
+        ):
+            raise HTTPException(
+                status_code=(
+                    exc.status_code
+                ),
+                detail=str(
+                    exc
+                ),
+            ) from exc
+
         raise HTTPException(
             status_code=500,
             detail=(
@@ -2250,6 +2277,19 @@ async def send_message_with_attachments(
                 user_message
             ),
         )
+
+        if isinstance(
+            exc,
+            LLMProviderError,
+        ):
+            raise HTTPException(
+                status_code=(
+                    exc.status_code
+                ),
+                detail=str(
+                    exc
+                ),
+            ) from exc
 
         raise HTTPException(
             status_code=500,

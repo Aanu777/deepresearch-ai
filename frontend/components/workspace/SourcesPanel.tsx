@@ -16,7 +16,6 @@ import {
 
 import {
   Badge,
-  IconButton,
   Surface,
 } from "@/components/ui";
 
@@ -295,11 +294,6 @@ function SourceRow({
               )}
             </div>
 
-            {url && (
-              <IconButton
-                aschild={undefined}
-              />
-            )}
           </div>
 
           {snippet && (
