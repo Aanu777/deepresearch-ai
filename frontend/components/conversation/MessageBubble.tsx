@@ -428,9 +428,10 @@ function TextMessage({
         <div
           className="
             w-full
-            max-w-[82%]
+            max-w-[92%]
 
-            sm:max-w-[72%]
+            sm:max-w-[78%]
+            lg:max-w-[72%]
           "
         >
           <div
@@ -704,7 +705,7 @@ function TextMessage({
 
           ${
             isUser
-              ? "max-w-[82%] sm:max-w-[72%]"
+              ? "max-w-[92%] sm:max-w-[78%] lg:max-w-[72%]"
               : "w-full"
           }
         `}

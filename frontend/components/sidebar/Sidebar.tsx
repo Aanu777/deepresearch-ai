@@ -812,7 +812,7 @@ export default function Sidebar({
         fixed
         left-3
         top-3
-        z-40
+        z-[70]
         border
         border-white/[0.08]
         bg-[#111111]/90
@@ -1786,8 +1786,8 @@ function MobileSidebar({
           relative
           z-10
           h-full
-          w-[280px]
-          max-w-[88vw]
+          w-[min(88vw,320px)]
+          sm:w-[320px]
           border-r
           border-white/[0.07]
           bg-[#0d0d0d]
