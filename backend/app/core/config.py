@@ -78,6 +78,22 @@ class Settings(BaseSettings):
     )
 
     # ========================================================
+    # CORS
+    # ========================================================
+
+    CORS_ORIGINS: str = (
+        "http://localhost:3000,"
+        "http://127.0.0.1:3000,"
+        "https://deepresearch-ai-nu.vercel.app,"
+        "https://deepresearch-ai-ayan-a664.vercel.app,"
+        "https://deepresearch-ai-git-main-ayan-a664.vercel.app"
+    )
+
+    CORS_ORIGIN_REGEX: str = (
+        r"^https://deepresearch-[a-z0-9-]+-ayan-a664\.vercel\.app$"
+    )
+
+    # ========================================================
     # SETTINGS
     # ========================================================
 
