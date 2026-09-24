@@ -78,8 +78,40 @@ class LLMService:
                 }
             )
 
+        history_limit = max(
+            1,
+            settings.OPENROUTER_MAX_HISTORY_MESSAGES,
+        )
+
+        system_messages = [
+            message
+            for message in messages
+            if message.get("role") == "system"
+        ]
+
+        non_system_messages = [
+            message
+            for message in messages
+            if message.get("role") != "system"
+        ]
+
+        if (
+            len(non_system_messages)
+            > history_limit
+        ):
+            non_system_messages = (
+                non_system_messages[
+                    -history_limit:
+                ]
+            )
+
+        if has_system_message:
+            prepared_messages.extend(
+                system_messages[:1]
+            )
+
         prepared_messages.extend(
-            messages
+            non_system_messages
         )
 
         selected_model = (
@@ -94,6 +126,10 @@ class LLMService:
                     model=selected_model,
                     messages=prepared_messages,  # type: ignore[arg-type]
                     temperature=temperature,
+                    max_tokens=(
+                        settings
+                        .OPENROUTER_MAX_TOKENS
+                    ),
                 )
             )
 
