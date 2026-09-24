@@ -1,889 +1,681 @@
 "use client";
 
 import {
-  Clock3,
-  Copy,
+  AlertCircle,
+  Check,
+  CheckCircle2,
+  Clipboard,
   Download,
   FileText,
-  CheckCircle2,
-  AlertCircle,
-  Sparkles,
-  BookOpen,
-  ShieldCheck,
-  Check,
 } from "lucide-react";
 
-import { useState } from "react";
+import {
+  useState,
+} from "react";
 
-import { useResearch } from "../context/ResearchContext";
+import {
+  useResearch,
+} from "../context/ResearchContext";
+
+import {
+  Badge,
+  IconButton,
+  Spinner,
+} from "@/components/ui";
 
 export default function ReportPanel() {
-  const { job } = useResearch();
+  const {
+    job,
+  } =
+    useResearch();
 
-  const [copied, setCopied] = useState(false);
+  const [
+    copied,
+    setCopied,
+  ] =
+    useState(false);
 
-  const metrics = job?.metrics ?? {
-    sources: 0,
-    confidence: 0,
-    agents: 5,
-    runtime: 0,
-  };
+  const report =
+    job?.report ?? "";
 
-  const report = job?.report ?? "";
+  const status =
+    job?.status ?? "idle";
 
-  const status = job?.status ?? "idle";
+  // ==========================================================
+  // COPY
+  // ==========================================================
 
-  const runtime = metrics.runtime ?? 0;
-
-  const minutes = Math.floor(runtime / 60);
-  const seconds = runtime % 60;
-
-  const formattedRuntime =
-    runtime > 0
-      ? `${minutes}m ${seconds}s`
-      : "0s";
-
-  // ============================================================
-  // COPY REPORT
-  // ============================================================
-
-  const copyReport = async () => {
-    if (!report) return;
-
-    try {
-      await navigator.clipboard.writeText(report);
-
-      setCopied(true);
-
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
-    } catch (error) {
-      console.error(
-        "Failed to copy report:",
-        error
-      );
+  async function copyReport() {
+    if (!report) {
+      return;
     }
-  };
 
-  // ============================================================
-  // EXPORT REPORT
-  // ============================================================
-
-  const exportReport = () => {
-    if (!report) return;
-
-    const blob = new Blob(
-      [report],
-      {
-        type: "text/plain",
-      }
+    await navigator.clipboard.writeText(
+      report
     );
 
+    setCopied(
+      true
+    );
+
+    setTimeout(
+      () =>
+        setCopied(
+          false
+        ),
+      1800
+    );
+  }
+
+  // ==========================================================
+  // DOWNLOAD
+  // ==========================================================
+
+  function downloadReport() {
+    if (!report) {
+      return;
+    }
+
+    const blob =
+      new Blob(
+        [report],
+        {
+          type:
+            "text/plain;charset=utf-8",
+        }
+      );
+
     const url =
-      URL.createObjectURL(blob);
+      URL.createObjectURL(
+        blob
+      );
 
     const link =
-      document.createElement("a");
+      document.createElement(
+        "a"
+      );
 
-    link.href = url;
+    link.href =
+      url;
 
     link.download =
       "deepresearch-report.txt";
 
-    document.body.appendChild(link);
+    document.body.appendChild(
+      link
+    );
 
     link.click();
 
-    document.body.removeChild(link);
+    link.remove();
 
-    URL.revokeObjectURL(url);
-  };
+    URL.revokeObjectURL(
+      url
+    );
+  }
 
-  // ============================================================
-  // STATUS
-  // ============================================================
+  // ==========================================================
+  // IDLE
+  // ==========================================================
 
-  const isCompleted =
-    status === "completed";
-
-  const isRunning =
-    status === "running" ||
-    status === "queued";
-
-  return (
-    <section
-      className="
-        relative
-        overflow-hidden
-        rounded-[32px]
-        border
-        border-white/[0.09]
-        bg-[#090E15]
-        shadow-[0_25px_100px_rgba(0,0,0,0.35)]
-      "
-    >
-
-      {/* ====================================================== */}
-      {/* AMBIENT BACKGROUND */}
-      {/* ====================================================== */}
-
-      <div
-        className="
-          pointer-events-none
-          absolute
-          -right-40
-          -top-40
-          h-80
-          w-80
-          rounded-full
-          bg-cyan-400/[0.035]
-          blur-[120px]
-        "
-      />
-
-      <div
-        className="
-          pointer-events-none
-          absolute
-          -bottom-40
-          left-1/3
-          h-80
-          w-80
-          rounded-full
-          bg-blue-500/[0.025]
-          blur-[120px]
-        "
-      />
-
-
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
-
-      <div
-        className="
-          relative
-          flex
-          flex-col
-          gap-5
-          border-b
-          border-white/[0.07]
-          px-6
-          py-6
-          sm:px-8
-          sm:flex-row
-          sm:items-center
-          sm:justify-between
-        "
-      >
-
-        {/* TITLE */}
-
-        <div className="flex items-center gap-4">
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              shrink-0
-              items-center
-              justify-center
-              rounded-2xl
-              border
-              border-cyan-400/10
-              bg-cyan-400/[0.07]
-            "
-          >
+  if (
+    !job &&
+    status === "idle"
+  ) {
+    return (
+      <section className="w-full border-t border-white/[0.08]">
+        <div className="flex min-h-[240px] items-center justify-center">
+          <div className="max-w-md px-6 text-center">
             <FileText
-              size={21}
-              className="text-cyan-400"
+              size={20}
+              strokeWidth={1.5}
+              className="mx-auto mb-4 text-white/20"
             />
-          </div>
 
-          <div>
-
-            <div className="flex items-center gap-3">
-
-              <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                Final Research Report
-              </h2>
-
-              {isCompleted && (
-                <span
-                  className="
-                    hidden
-                    items-center
-                    gap-1.5
-                    rounded-full
-                    border
-                    border-emerald-400/15
-                    bg-emerald-400/[0.06]
-                    px-2.5
-                    py-1
-                    text-[10px]
-                    font-semibold
-                    uppercase
-                    tracking-wider
-                    text-emerald-400
-                    sm:flex
-                  "
-                >
-                  <CheckCircle2 size={11} />
-                  Complete
-                </span>
-              )}
-
-            </div>
-
-            <p className="mt-1.5 text-sm text-slate-500">
-              Generated by DeepResearch AI
+            <p className="text-sm font-medium text-white/60">
+              Your research report will appear here
             </p>
 
+            <p className="mt-2 text-xs leading-5 text-white/25">
+              Start a research task above and the finished answer
+              will appear in this space.
+            </p>
           </div>
-
         </div>
+      </section>
+    );
+  }
 
+  // ==========================================================
+  // RUNNING
+  // ==========================================================
 
-        {/* ACTIONS */}
-
-        <div className="flex items-center gap-2">
-
-          <button
-            type="button"
-            onClick={copyReport}
-            disabled={!report}
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-white/[0.08]
-              bg-white/[0.025]
-              px-3.5
-              py-2.5
-              text-xs
-              font-medium
-              text-slate-400
-              transition-all
-              duration-300
-              hover:border-cyan-400/20
-              hover:bg-cyan-400/[0.04]
-              hover:text-white
-              disabled:cursor-not-allowed
-              disabled:opacity-30
-            "
-          >
-
-            {copied ? (
-              <Check
-                size={15}
-                className="text-emerald-400"
-              />
-            ) : (
-              <Copy size={15} />
-            )}
-
-            {copied
-              ? "Copied"
-              : "Copy"}
-
-          </button>
-
-          <button
-            type="button"
-            onClick={exportReport}
-            disabled={!report}
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-cyan-400/15
-              bg-cyan-400/[0.06]
-              px-3.5
-              py-2.5
-              text-xs
-              font-medium
-              text-cyan-300
-              transition-all
-              duration-300
-              hover:border-cyan-400/30
-              hover:bg-cyan-400/[0.10]
-              hover:text-cyan-200
-              disabled:cursor-not-allowed
-              disabled:opacity-30
-            "
-          >
-
-            <Download size={15} />
-
-            Export
-
-          </button>
-
-        </div>
-
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* METRICS */}
-      {/* ====================================================== */}
-
-      <div
-        className="
-          relative
-          grid
-          grid-cols-2
-          border-b
-          border-white/[0.07]
-          bg-white/[0.015]
-          sm:grid-cols-4
-        "
-      >
-
-        <Metric
-          title="Sources"
-          value={String(metrics.sources)}
-          icon={
-            <BookOpen
-              size={15}
+  if (
+    status === "running" ||
+    status === "queued" ||
+    status === "processing"
+  ) {
+    return (
+      <section className="w-full border-t border-white/[0.08]">
+        <div className="py-8">
+          <div className="flex items-center gap-3">
+            <Spinner
+              size={16}
+              className="text-cyan-400"
             />
-          }
-        />
 
-        <Metric
-          title="Confidence"
-          value={`${metrics.confidence}%`}
-          highlight
-          icon={
-            <ShieldCheck
-              size={15}
-            />
-          }
-        />
+            <div>
+              <p className="text-sm font-medium text-white/70">
+                Researching
+              </p>
 
-        <Metric
-          title="AI Agents"
-          value={String(metrics.agents)}
-          icon={
-            <Sparkles
-              size={15}
-            />
-          }
-        />
-
-        <Metric
-          title="Runtime"
-          value={formattedRuntime}
-          icon={
-            <Clock3
-              size={15}
-            />
-          }
-        />
-
-      </div>
-
-
-      {/* ====================================================== */}
-      {/* REPORT CONTENT */}
-      {/* ====================================================== */}
-
-      <article
-        className="
-          relative
-          min-h-[430px]
-          px-6
-          py-8
-          sm:px-10
-          sm:py-10
-          lg:px-14
-          lg:py-12
-        "
-      >
-
-        {/* ================================================== */}
-        {/* IDLE */}
-        {/* ================================================== */}
-
-        {status === "idle" && !report && (
-          <EmptyState />
-        )}
-
-
-        {/* ================================================== */}
-        {/* QUEUED */}
-        {/* ================================================== */}
-
-        {status === "queued" && !report && (
-          <LoadingState
-            message="Research job queued..."
-          />
-        )}
-
-
-        {/* ================================================== */}
-        {/* RUNNING */}
-        {/* ================================================== */}
-
-        {status === "running" && !report && (
-          <LoadingState
-            message={
-              job?.current_step
-                ? `${job.current_step}...`
-                : "Researching..."
-            }
-          />
-        )}
-
-
-        {/* ================================================== */}
-        {/* FAILED */}
-        {/* ================================================== */}
-
-        {status === "failed" && (
-          <div
-            className="
-              mx-auto
-              max-w-2xl
-              rounded-2xl
-              border
-              border-red-400/15
-              bg-red-400/[0.04]
-              p-6
-            "
-          >
-
-            <div className="flex items-start gap-4">
-
-              <div
-                className="
-                  flex
-                  h-10
-                  w-10
-                  shrink-0
-                  items-center
-                  justify-center
-                  rounded-xl
-                  bg-red-400/[0.08]
-                "
-              >
-
-                <AlertCircle
-                  size={19}
-                  className="text-red-400"
-                />
-
-              </div>
-
-              <div>
-
-                <h3 className="font-semibold text-red-400">
-                  Research failed
-                </h3>
-
-                <p className="mt-2 text-sm leading-6 text-slate-400">
-                  {job?.error ||
-                    "An unknown error occurred."}
-                </p>
-
-              </div>
-
+              <p className="mt-1 text-xs text-white/25">
+                Gathering and analyzing information...
+              </p>
             </div>
-
           </div>
-        )}
+        </div>
+      </section>
+    );
+  }
 
+  // ==========================================================
+  // FAILED
+  // ==========================================================
 
-        {/* ================================================== */}
-        {/* REPORT */}
-        {/* ================================================== */}
+  if (
+    status ===
+    "failed"
+  ) {
+    return (
+      <section className="w-full border-t border-white/[0.08]">
+        <div className="py-8">
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              size={17}
+              className="mt-0.5 shrink-0 text-red-400"
+            />
+
+            <div>
+              <p className="text-sm font-medium text-white/70">
+                Research could not be completed
+              </p>
+
+              <p className="mt-1 text-xs leading-5 text-white/25">
+                Something went wrong while processing this research
+                request.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // ==========================================================
+  // REPORT
+  // ==========================================================
+
+  return (
+    <section className="w-full border-t border-white/[0.08]">
+      {/* HEADER */}
+
+      <div className="flex items-center justify-between border-b border-white/[0.06] py-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <FileText
+            size={16}
+            className="shrink-0 text-white/30"
+          />
+
+          <span className="truncate text-sm font-medium text-white/65">
+            Research report
+          </span>
+
+          {report && (
+            <Badge
+              variant="neutral"
+              className="hidden sm:inline-flex"
+            >
+              {getWordCount(
+                report
+              )}{" "}
+              words
+            </Badge>
+          )}
+        </div>
 
         {report && (
-          <div className="mx-auto max-w-4xl">
-
-            {/* Status */}
-
-            <div className="mb-9 flex items-center justify-between">
-
-              <div className="flex items-center gap-3">
-
-                <div
-                  className={`
-                    flex
-                    h-8
-                    w-8
-                    items-center
-                    justify-center
-                    rounded-full
-                    ${
-                      isCompleted
-                        ? "bg-emerald-400/[0.08]"
-                        : "bg-cyan-400/[0.08]"
-                    }
-                  `}
-                >
-
-                  {isCompleted ? (
-                    <CheckCircle2
-                      size={17}
-                      className="text-emerald-400"
-                    />
-                  ) : (
-                    <Sparkles
-                      size={16}
-                      className="text-cyan-400"
-                    />
-                  )}
-
-                </div>
-
-                <span
-                  className={
-                    isCompleted
-                      ? "text-sm font-medium text-emerald-400"
-                      : "text-sm font-medium text-cyan-400"
-                  }
-                >
-                  {isCompleted
-                    ? "Research Completed Successfully"
-                    : "Research In Progress"}
-                </span>
-
-              </div>
-
-
-              {isRunning && (
-                <span className="hidden items-center gap-2 text-xs text-slate-500 sm:flex">
-
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-
-                  Live synthesis
-
-                </span>
-              )}
-
-            </div>
-
-
-            {/* Divider */}
-
-            <div className="mb-9 h-px bg-gradient-to-r from-cyan-400/20 via-white/[0.06] to-transparent" />
-
-
-            {/* Report */}
-
-            <div
-              className="
-                whitespace-pre-wrap
-                text-[15px]
-                leading-8
-                text-slate-300
-                selection:bg-cyan-400/20
-                selection:text-white
-              "
+          <div className="flex items-center gap-1">
+            <IconButton
+              type="button"
+              size="sm"
+              onClick={
+                copyReport
+              }
+              aria-label="Copy report"
+              title={
+                copied
+                  ? "Copied"
+                  : "Copy report"
+              }
             >
-              {report}
-            </div>
+              {copied ? (
+                <Check
+                  size={14}
+                />
+              ) : (
+                <Clipboard
+                  size={14}
+                />
+              )}
+            </IconButton>
 
-
-            {/* Bottom completion */}
-
-            {isCompleted && (
-              <div className="mt-12 border-t border-white/[0.06] pt-7">
-
-                <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-
-                  <div className="flex items-center gap-2">
-
-                    <CheckCircle2
-                      size={14}
-                      className="text-emerald-400"
-                    />
-
-                    Research verified
-
-                  </div>
-
-                  <span className="text-white/10">
-                    •
-                  </span>
-
-                  <span>
-                    {metrics.sources} sources analyzed
-                  </span>
-
-                  <span className="text-white/10">
-                    •
-                  </span>
-
-                  <span>
-                    {metrics.agents} AI agents
-                  </span>
-
-                </div>
-
-              </div>
-            )}
-
+            <IconButton
+              type="button"
+              size="sm"
+              onClick={
+                downloadReport
+              }
+              aria-label="Download report"
+              title="Download report"
+            >
+              <Download
+                size={14}
+              />
+            </IconButton>
           </div>
         )}
+      </div>
 
-      </article>
+      {/* BODY */}
 
+      {!report ? (
+        <div className="py-10">
+          <p className="text-sm text-white/25">
+            No report was generated.
+          </p>
+        </div>
+      ) : (
+        <article className="max-w-3xl py-8 sm:py-10">
+          <ReportContent
+            content={
+              report
+            }
+          />
+        </article>
+      )}
+
+      {/* COMPLETION */}
+
+      {report && (
+        <div className="flex items-center gap-2 border-t border-white/[0.06] py-4 text-[11px] text-white/25">
+          <CheckCircle2
+            size={13}
+            className="text-emerald-400/70"
+          />
+
+          <span>
+            Research completed
+          </span>
+        </div>
+      )}
     </section>
   );
 }
 
+// ============================================================
+// REPORT CONTENT
+// ============================================================
 
-/* ============================================================
-   METRIC
-============================================================ */
-
-function Metric({
-  title,
-  value,
-  highlight = false,
-  icon,
+function ReportContent({
+  content,
 }: {
-  title: string;
-  value: string;
-  highlight?: boolean;
-  icon?: React.ReactNode;
+  content: string;
 }) {
+  const blocks =
+    content
+      .split(
+        /\n\s*\n/
+      )
+      .map(
+        (
+          block
+        ) =>
+          block.trim()
+      )
+      .filter(
+        Boolean
+      );
+
   return (
-    <div
-      className="
-        group
-        border-r
-        border-b
-        border-white/[0.06]
-        px-5
-        py-5
-        transition-colors
-        duration-300
-        hover:bg-white/[0.025]
-        sm:border-b-0
-        sm:px-7
-        sm:py-6
-        last:border-r-0
-        [&:nth-child(2)]:border-r-0
-        sm:[&:nth-child(2)]:border-r
-      "
-    >
+    <div className="space-y-7">
+      {blocks.map(
+        (
+          block,
+          index
+        ) => {
+          const lines =
+            block
+              .split(
+                "\n"
+              )
+              .map(
+                (
+                  line
+                ) =>
+                  line.trim()
+              )
+              .filter(
+                Boolean
+              );
 
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+          const firstLine =
+            lines[0];
 
-        <span
-          className={
-            highlight
-              ? "text-cyan-400/70"
-              : "text-slate-600"
+          // ====================================================
+          // HEADING
+          // ====================================================
+
+          if (
+            /^#{1,3}\s/.test(
+              firstLine
+            )
+          ) {
+            const heading =
+              firstLine.replace(
+                /^#{1,3}\s+/,
+                ""
+              );
+
+            return (
+              <div key={index}>
+                <h2
+                  className="
+                    text-lg
+                    font-semibold
+                    tracking-[-0.02em]
+                    text-white/95
+                    sm:text-xl
+                  "
+                >
+                  {heading}
+                </h2>
+
+                {lines
+                  .slice(
+                    1
+                  )
+                  .map(
+                    (
+                      line,
+                      lineIndex
+                    ) => (
+                      <p
+                        key={
+                          lineIndex
+                        }
+                        className="
+                          mt-3
+                          text-sm
+                          leading-7
+                          text-white/55
+                        "
+                      >
+                        {formatInlineMarkdown(
+                          line
+                        )}
+                      </p>
+                    )
+                  )}
+              </div>
+            );
           }
-        >
-          {icon}
-        </span>
 
-        {title}
+          // ====================================================
+          // BULLETS
+          // ====================================================
 
-      </div>
-
-      <h3
-        className={`
-          mt-2
-          text-2xl
-          font-semibold
-          tracking-tight
-          ${
-            highlight
-              ? "text-cyan-400"
-              : "text-white"
+          if (
+            lines.every(
+              (
+                line
+              ) =>
+                /^[-*•]\s+/.test(
+                  line
+                )
+            )
+          ) {
+            return (
+              <ul
+                key={index}
+                className="space-y-2.5 pl-5"
+              >
+                {lines.map(
+                  (
+                    line,
+                    lineIndex
+                  ) => (
+                    <li
+                      key={
+                        lineIndex
+                      }
+                      className="
+                        list-disc
+                        pl-1
+                        text-sm
+                        leading-7
+                        text-white/55
+                        marker:text-white/25
+                      "
+                    >
+                      {formatInlineMarkdown(
+                        line.replace(
+                          /^[-*•]\s+/,
+                          ""
+                        )
+                      )}
+                    </li>
+                  )
+                )}
+              </ul>
+            );
           }
-        `}
-      >
-        {value}
-      </h3>
 
+          // ====================================================
+          // NUMBERED
+          // ====================================================
+
+          if (
+            lines.every(
+              (
+                line
+              ) =>
+                /^\d+\.\s+/.test(
+                  line
+                )
+            )
+          ) {
+            return (
+              <ol
+                key={index}
+                className="space-y-2.5 pl-6"
+              >
+                {lines.map(
+                  (
+                    line,
+                    lineIndex
+                  ) => (
+                    <li
+                      key={
+                        lineIndex
+                      }
+                      className="
+                        list-decimal
+                        pl-1
+                        text-sm
+                        leading-7
+                        text-white/55
+                        marker:text-white/30
+                      "
+                    >
+                      {formatInlineMarkdown(
+                        line.replace(
+                          /^\d+\.\s+/,
+                          ""
+                        )
+                      )}
+                    </li>
+                  )
+                )}
+              </ol>
+            );
+          }
+
+          // ====================================================
+          // PARAGRAPH
+          // ====================================================
+
+          return (
+            <p
+              key={index}
+              className="
+                text-[15px]
+                leading-7
+                text-white/68
+              "
+            >
+              {formatInlineMarkdown(
+                block.replace(
+                  /\n/g,
+                  " "
+                )
+              )}
+            </p>
+          );
+        }
+      )}
     </div>
   );
 }
 
+// ============================================================
+// INLINE MARKDOWN
+// ============================================================
 
-/* ============================================================
-   EMPTY STATE
-============================================================ */
+function formatInlineMarkdown(
+  text: string
+) {
+  const parts =
+    text.split(
+      /(\*\*.*?\*\*|\*.*?\*|`.*?`)/g
+    );
 
-function EmptyState() {
-  return (
-    <div
-      className="
-        flex
-        min-h-[320px]
-        flex-col
-        items-center
-        justify-center
-        text-center
-      "
-    >
+  return parts.map(
+    (
+      part,
+      index
+    ) => {
+      if (
+        part.startsWith(
+          "**"
+        ) &&
+        part.endsWith(
+          "**"
+        )
+      ) {
+        return (
+          <strong
+            key={
+              index
+            }
+            className="font-semibold text-white/90"
+          >
+            {part.slice(
+              2,
+              -2
+            )}
+          </strong>
+        );
+      }
 
-      <div
-        className="
-          relative
-          mb-6
-          flex
-          h-16
-          w-16
-          items-center
-          justify-center
-          rounded-2xl
-          border
-          border-cyan-400/10
-          bg-cyan-400/[0.05]
-        "
-      >
+      if (
+        part.startsWith(
+          "*"
+        ) &&
+        part.endsWith(
+          "*"
+        )
+      ) {
+        return (
+          <em
+            key={
+              index
+            }
+            className="text-white/65"
+          >
+            {part.slice(
+              1,
+              -1
+            )}
+          </em>
+        );
+      }
 
-        <div
-          className="
-            absolute
-            inset-0
-            rounded-2xl
-            bg-cyan-400/[0.04]
-            blur-xl
-          "
-        />
-
-        <FileText
-          size={27}
-          className="relative text-cyan-400/70"
-        />
-
-      </div>
-
-      <h3 className="text-lg font-semibold text-white">
-        No research report yet
-      </h3>
-
-      <p className="mt-2 max-w-md text-sm leading-6 text-slate-500">
-        Enter a research question above and
-        launch Deep Research to generate your
-        report.
-      </p>
-
-    </div>
-  );
-}
-
-
-/* ============================================================
-   LOADING STATE
-============================================================ */
-
-function LoadingState({
-  message,
-}: {
-  message: string;
-}) {
-  return (
-    <div
-      className="
-        flex
-        min-h-[320px]
-        flex-col
-        items-center
-        justify-center
-        text-center
-      "
-    >
-
-      <div className="relative mb-7">
-
-        <div
-          className="
-            absolute
-            inset-0
-            rounded-full
-            bg-cyan-400/10
-            blur-2xl
-          "
-        />
-
-        <div
-          className="
-            relative
-            flex
-            h-14
-            w-14
-            items-center
-            justify-center
-            rounded-full
-            border
-            border-cyan-400/20
-            bg-cyan-400/[0.04]
-          "
-        >
-
-          <div
+      if (
+        part.startsWith(
+          "`"
+        ) &&
+        part.endsWith(
+          "`"
+        )
+      ) {
+        return (
+          <code
+            key={
+              index
+            }
             className="
-              h-6
-              w-6
-              animate-spin
-              rounded-full
-              border-2
-              border-white/10
-              border-t-cyan-400
+              rounded-md
+              border
+              border-white/[0.06]
+              bg-white/[0.05]
+              px-1.5
+              py-0.5
+              font-mono
+              text-[12px]
+              text-white/80
             "
-          />
+          >
+            {part.slice(
+              1,
+              -1
+            )}
+          </code>
+        );
+      }
 
-        </div>
-
-      </div>
-
-      <h3 className="text-lg font-semibold text-white">
-        {message}
-      </h3>
-
-      <p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">
-        Autonomous research agents are working
-        through the task and preparing your report.
-      </p>
-
-      <div className="mt-6 flex items-center gap-2">
-
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-
-        <span
-          className="
-            h-1.5
-            w-1.5
-            animate-pulse
-            rounded-full
-            bg-cyan-400/60
-          "
-          style={{
-            animationDelay: "150ms",
-          }}
-        />
-
-        <span
-          className="
-            h-1.5
-            w-1.5
-            animate-pulse
-            rounded-full
-            bg-cyan-400/30
-          "
-          style={{
-            animationDelay: "300ms",
-          }}
-        />
-
-      </div>
-
-    </div>
+      return (
+        <span key={index}>
+          {part}
+        </span>
+      );
+    }
   );
+}
+
+// ============================================================
+// WORD COUNT
+// ============================================================
+
+function getWordCount(
+  text: string
+) {
+  return text
+    .trim()
+    .split(
+      /\s+/
+    )
+    .filter(
+      Boolean
+    ).length;
 }

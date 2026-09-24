@@ -6,21 +6,104 @@ import ConversationComposer from "./ConversationComposer";
 
 export default function ConversationWorkspace() {
   return (
-    <main className="flex h-screen min-h-0 flex-col overflow-hidden bg-[#05070B] text-white">
-      {/* Header stays fixed */}
-      <div className="shrink-0">
+    <main
+      className="
+        flex
+        h-[100dvh]
+        min-h-0
+        w-full
+        min-w-0
+        flex-col
+        overflow-hidden
+        overscroll-none
+        bg-[#050505]
+        text-white
+      "
+    >
+      {/* ====================================================
+          HEADER
+      ==================================================== */}
+
+      <div
+        className="
+          relative
+          z-30
+          min-w-0
+          shrink-0
+        "
+      >
         <ConversationHeader />
       </div>
 
-      {/* Chat area */}
-      <div className="flex min-h-0 flex-1 flex-col">
-        {/* ONLY THIS AREA SCROLLS */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* ====================================================
+          CONVERSATION
+      ==================================================== */}
+
+      <div
+        className="
+          flex
+          min-h-0
+          min-w-0
+          flex-1
+          flex-col
+          overflow-hidden
+        "
+      >
+        {/* ==================================================
+            MESSAGE SCROLLER
+        ================================================== */}
+
+        <div
+          className="
+            min-h-0
+            min-w-0
+            flex-1
+            overflow-hidden
+          "
+        >
           <MessageList />
         </div>
 
-        {/* Composer NEVER moves down with messages */}
-        <div className="shrink-0 border-t border-white/[0.06] bg-[#05070B]/95 backdrop-blur-xl">
+        {/* ==================================================
+            COMPOSER
+        ================================================== */}
+
+        <div
+          className="
+            relative
+            z-20
+            w-full
+            min-w-0
+            shrink-0
+
+            bg-[#050505]
+
+            pb-[env(safe-area-inset-bottom)]
+          "
+        >
+          {/* ================================================
+              TOP FADE
+          ================================================ */}
+
+          <div
+            className="
+              pointer-events-none
+
+              absolute
+              inset-x-0
+              -top-8
+
+              h-8
+
+              bg-gradient-to-t
+              from-[#050505]
+              to-transparent
+
+              sm:-top-12
+              sm:h-12
+            "
+          />
+
           <ConversationComposer />
         </div>
       </div>

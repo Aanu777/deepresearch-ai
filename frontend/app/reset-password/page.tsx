@@ -6,393 +6,380 @@ import {
   useState,
 } from "react";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+} from "lucide-react";
 
 import AuthShell from "@/components/auth/AuthShell";
-import { createClient } from "@/lib/supabase/client";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+import {
+  Button,
+  IconButton,
+  Input,
+  Spinner,
+} from "@/components/ui";
 
 export default function ResetPasswordPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const supabase = createClient();
+  const searchParams =
+    useSearchParams();
 
-  const [password, setPassword] =
+  const supabase =
+    createClient();
+
+  const [
+    password,
+    setPassword,
+  ] =
     useState("");
 
-  const [confirmPassword, setConfirmPassword] =
+  const [
+    confirmPassword,
+    setConfirmPassword,
+  ] =
     useState("");
 
-  const [showPassword, setShowPassword] =
+  const [
+    showPassword,
+    setShowPassword,
+  ] =
     useState(false);
 
-  const [showConfirmPassword, setShowConfirmPassword] =
+  const [
+    showConfirmPassword,
+    setShowConfirmPassword,
+  ] =
     useState(false);
 
-  const [loading, setLoading] =
+  const [
+    loading,
+    setLoading,
+  ] =
     useState(false);
 
-  const [checkingSession, setCheckingSession] =
+  const [
+    sessionLoading,
+    setSessionLoading,
+  ] =
     useState(true);
 
-  const [error, setError] =
-    useState("");
-
-  const [message, setMessage] =
-    useState("");
-
-  const [recoveryReady, setRecoveryReady] =
+  const [
+    validSession,
+    setValidSession,
+  ] =
     useState(false);
 
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const [
+    success,
+    setSuccess,
+  ] =
+    useState(false);
+
+  // ==========================================================
+  // LOAD RECOVERY SESSION
+  // ==========================================================
+
   useEffect(() => {
-    let mounted = true;
+    let mounted =
+      true;
 
-    async function checkRecoverySession() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    async function loadSession() {
+      try {
+        const code =
+          searchParams.get(
+            "code"
+          );
 
-      if (!mounted) {
-        return;
-      }
+        if (code) {
+          const {
+            error:
+              exchangeError,
+          } =
+            await supabase.auth.exchangeCodeForSession(
+              code
+            );
 
-      if (session) {
-        setRecoveryReady(true);
-      }
+          if (
+            exchangeError
+          ) {
+            throw exchangeError;
+          }
+        }
 
-      setCheckingSession(false);
-    }
+        const {
+          data: {
+            session,
+          },
+        } =
+          await supabase.auth.getSession();
 
-    checkRecoverySession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (event, session) => {
         if (!mounted) {
           return;
         }
 
-        if (
-          event === "PASSWORD_RECOVERY" &&
-          session
-        ) {
-          setRecoveryReady(true);
-          setCheckingSession(false);
+        setValidSession(
+          Boolean(
+            session
+          )
+        );
+
+        if (!session) {
+          setError(
+            "This password reset link is invalid or has expired."
+          );
         }
 
-        if (
-          event === "SIGNED_IN" &&
-          session
-        ) {
-          setRecoveryReady(true);
-          setCheckingSession(false);
+      } catch (err) {
+        if (!mounted) {
+          return;
+        }
+
+        setValidSession(
+          false
+        );
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to verify the reset link."
+        );
+
+      } finally {
+        if (mounted) {
+          setSessionLoading(
+            false
+          );
         }
       }
-    );
+    }
+
+    loadSession();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [
+    searchParams,
+    supabase.auth,
+  ]);
 
-  async function handleSubmit(
+  // ==========================================================
+  // RESET PASSWORD
+  // ==========================================================
+
+  async function handleReset(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
-    setError("");
-    setMessage("");
-
-    if (!recoveryReady) {
-      setError(
-        "This password reset link is invalid or has expired. Please request a new one."
-      );
+    if (
+      loading ||
+      !validSession
+    ) {
       return;
     }
 
-    if (password.length < 8) {
+    setError("");
+
+    if (
+      password.length <
+      8
+    ) {
       setError(
         "Password must be at least 8 characters."
       );
+
       return;
     }
 
-    if (password !== confirmPassword) {
+    if (
+      password !==
+      confirmPassword
+    ) {
       setError(
         "Passwords do not match."
       );
+
       return;
     }
 
-    setLoading(true);
+    setLoading(
+      true
+    );
 
     try {
       const {
-        error: updateError,
-      } = await supabase.auth.updateUser({
-        password,
-      });
+        error:
+          updateError,
+      } =
+        await supabase.auth.updateUser(
+          {
+            password,
+          }
+        );
 
-      if (updateError) {
+      if (
+        updateError
+      ) {
         throw updateError;
       }
 
-      setMessage(
-        "Your password has been updated successfully."
+      setSuccess(
+        true
       );
 
-      setPassword("");
-      setConfirmPassword("");
-
-      /*
-       * Give the user a moment to see the
-       * success state before returning to login.
-       */
-      setTimeout(() => {
-        router.push("/login");
-        router.refresh();
-      }, 1400);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : "Unable to update your password."
       );
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
-  if (checkingSession) {
+  // ==========================================================
+  // VERIFYING
+  // ==========================================================
+
+  if (
+    sessionLoading
+  ) {
     return (
       <AuthShell
-        title="Reset your password"
-        subtitle="Verifying your secure reset link..."
-      >
-        <div className="flex flex-col items-center py-8">
-          <div
-            className="
-              h-8 w-8
-              animate-spin
-              rounded-full
-              border-2
-              border-white/[0.08]
-              border-t-cyan-400
-            "
-          />
-
-          <p className="mt-4 text-xs text-slate-500">
-            Please wait a moment.
-          </p>
-        </div>
-      </AuthShell>
-    );
-  }
-
-  if (!recoveryReady) {
-    return (
-      <AuthShell
-        title="Reset link expired"
-        subtitle="This password reset link is invalid or has already been used."
+        title="Reset password"
+        subtitle="Verifying your reset link."
       >
         <div
           className="
-            rounded-xl
-            border border-red-400/10
-            bg-red-400/[0.06]
-            px-4 py-3
-            text-xs leading-5
-            text-red-300
+            flex
+            items-center
+            justify-center
+            gap-2
+            py-8
+            text-sm
+            text-white/35
           "
         >
-          Please request a new password reset link
-          and try again.
+          <Spinner
+            size={16}
+          />
+
+          Verifying...
         </div>
-
-        <Link
-          href="/forgot-password"
-          className="
-            mt-5
-            flex h-11 w-full
-            items-center justify-center
-            rounded-xl
-            bg-white
-            text-sm font-semibold
-            text-black
-            transition
-            hover:bg-slate-200
-          "
-        >
-          Request a new link
-        </Link>
-
-        <p className="mt-6 text-center text-sm text-slate-500">
-          <Link
-            href="/login"
-            className="
-              font-medium
-              text-white
-              transition
-              hover:text-cyan-300
-            "
-          >
-            Back to login
-          </Link>
-        </p>
       </AuthShell>
     );
   }
 
-  return (
-    <AuthShell
-      title="Choose a new password"
-      subtitle="Create a new password for your DeepResearch account."
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
+  // ==========================================================
+  // SUCCESS
+  // ==========================================================
+
+  if (success) {
+    return (
+      <AuthShell
+        title="Password updated"
+        subtitle="Your new password is ready to use."
       >
-        {/* NEW PASSWORD */}
-
-        <div>
-          <label className="mb-2 block text-xs font-medium text-slate-400">
-            New password
-          </label>
-
-          <div className="relative">
-            <input
-              type={
-                showPassword
-                  ? "text"
-                  : "password"
-              }
-              required
-              autoComplete="new-password"
-              minLength={8}
-              value={password}
-              onChange={(event) =>
-                setPassword(
-                  event.target.value
-                )
-              }
-              placeholder="At least 8 characters"
-              className="
-                h-11 w-full rounded-xl
-                border border-white/[0.08]
-                bg-white/[0.025]
-                px-3.5 pr-16
-                text-sm text-white
-                outline-none
-                transition
-                placeholder:text-slate-700
-                focus:border-cyan-400/40
-                focus:bg-white/[0.04]
-              "
+        <div className="text-center">
+          <div
+            className="
+              mx-auto
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-full
+              bg-emerald-400/[0.08]
+              text-emerald-300
+            "
+          >
+            <CheckCircle2
+              size={20}
             />
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowPassword(
-                  (value) => !value
-                )
-              }
-              className="
-                absolute right-3
-                top-1/2
-                -translate-y-1/2
-                text-xs
-                text-slate-500
-                transition
-                hover:text-slate-200
-              "
-            >
-              {showPassword
-                ? "Hide"
-                : "Show"}
-            </button>
           </div>
 
-          <p className="mt-1.5 text-[11px] text-slate-600">
-            Use at least 8 characters.
+          <p
+            className="
+              mt-4
+              text-sm
+              leading-6
+              text-white/40
+            "
+          >
+            Your password has been changed successfully.
           </p>
+
+          <Button
+            type="button"
+            variant="primary"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              router.replace(
+                "/conversation"
+              );
+
+              router.refresh();
+            }}
+            className="mt-6 h-11"
+          >
+            Continue to DeepResearch
+          </Button>
         </div>
+      </AuthShell>
+    );
+  }
 
-        {/* CONFIRM PASSWORD */}
+  // ==========================================================
+  // INVALID LINK
+  // ==========================================================
 
-        <div>
-          <label className="mb-2 block text-xs font-medium text-slate-400">
-            Confirm new password
-          </label>
-
-          <div className="relative">
-            <input
-              type={
-                showConfirmPassword
-                  ? "text"
-                  : "password"
-              }
-              required
-              autoComplete="new-password"
-              minLength={8}
-              value={confirmPassword}
-              onChange={(event) =>
-                setConfirmPassword(
-                  event.target.value
-                )
-              }
-              placeholder="Repeat your new password"
-              className="
-                h-11 w-full rounded-xl
-                border border-white/[0.08]
-                bg-white/[0.025]
-                px-3.5 pr-16
-                text-sm text-white
-                outline-none
-                transition
-                placeholder:text-slate-700
-                focus:border-cyan-400/40
-                focus:bg-white/[0.04]
-              "
-            />
-
-            <button
-              type="button"
-              onClick={() =>
-                setShowConfirmPassword(
-                  (value) => !value
-                )
-              }
-              className="
-                absolute right-3
-                top-1/2
-                -translate-y-1/2
-                text-xs
-                text-slate-500
-                transition
-                hover:text-slate-200
-              "
-            >
-              {showConfirmPassword
-                ? "Hide"
-                : "Show"}
-            </button>
-          </div>
-        </div>
-
-        {/* ERROR */}
-
+  if (
+    !validSession
+  ) {
+    return (
+      <AuthShell
+        title="Reset link expired"
+        subtitle="This password reset link can no longer be used."
+      >
         {error && (
           <div
             role="alert"
             className="
               rounded-xl
-              border border-red-400/10
+              border
+              border-red-400/[0.12]
               bg-red-400/[0.06]
-              px-3 py-2.5
-              text-xs leading-5
+              px-3
+              py-3
+              text-xs
+              leading-5
               text-red-300
             "
           >
@@ -400,59 +387,277 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        {/* SUCCESS */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          fullWidth
+          onClick={() =>
+            router.push(
+              "/forgot-password"
+            )
+          }
+          className="mt-4 h-11"
+        >
+          Request another link
+        </Button>
+      </AuthShell>
+    );
+  }
 
-        {message && (
-          <div
-            role="status"
+  // ==========================================================
+  // FORM
+  // ==========================================================
+
+  return (
+    <AuthShell
+      title="Choose a new password"
+      subtitle="Use at least 8 characters for your new password."
+    >
+      <form
+        onSubmit={
+          handleReset
+        }
+        className="space-y-4"
+      >
+        {/* PASSWORD */}
+
+        <div>
+          <label
+            htmlFor="new-password"
             className="
-              rounded-xl
-              border border-emerald-400/10
-              bg-emerald-400/[0.06]
-              px-3 py-2.5
-              text-xs leading-5
-              text-emerald-300
+              mb-1.5
+              block
+              text-xs
+              font-medium
+              text-white/45
             "
           >
-            {message}
+            New password
+          </label>
+
+          <div className="relative">
+            <LockKeyhole
+              size={15}
+              className="
+                pointer-events-none
+                absolute
+                left-3.5
+                top-1/2
+                z-10
+                -translate-y-1/2
+                text-white/25
+              "
+            />
+
+            <Input
+              id="new-password"
+              type={
+                showPassword
+                  ? "text"
+                  : "password"
+              }
+              required
+              autoComplete="new-password"
+              value={
+                password
+              }
+              onChange={(
+                event
+              ) =>
+                setPassword(
+                  event.target.value
+                )
+              }
+              placeholder="At least 8 characters"
+              disabled={
+                loading
+              }
+              className="
+                h-11
+                pl-10
+                pr-12
+              "
+            />
+
+            <IconButton
+              type="button"
+              size="sm"
+              onClick={() =>
+                setShowPassword(
+                  (
+                    value
+                  ) =>
+                    !value
+                )
+              }
+              aria-label={
+                showPassword
+                  ? "Hide password"
+                  : "Show password"
+              }
+              className="
+                absolute
+                right-1.5
+                top-1/2
+                h-8
+                w-8
+                -translate-y-1/2
+              "
+            >
+              {showPassword ? (
+                <EyeOff
+                  size={15}
+                />
+              ) : (
+                <Eye
+                  size={15}
+                />
+              )}
+            </IconButton>
+          </div>
+        </div>
+
+        {/* CONFIRM */}
+
+        <div>
+          <label
+            htmlFor="confirm-new-password"
+            className="
+              mb-1.5
+              block
+              text-xs
+              font-medium
+              text-white/45
+            "
+          >
+            Confirm new password
+          </label>
+
+          <div className="relative">
+            <LockKeyhole
+              size={15}
+              className="
+                pointer-events-none
+                absolute
+                left-3.5
+                top-1/2
+                z-10
+                -translate-y-1/2
+                text-white/25
+              "
+            />
+
+            <Input
+              id="confirm-new-password"
+              type={
+                showConfirmPassword
+                  ? "text"
+                  : "password"
+              }
+              required
+              autoComplete="new-password"
+              value={
+                confirmPassword
+              }
+              onChange={(
+                event
+              ) =>
+                setConfirmPassword(
+                  event.target.value
+                )
+              }
+              placeholder="Repeat your password"
+              disabled={
+                loading
+              }
+              className="
+                h-11
+                pl-10
+                pr-12
+              "
+            />
+
+            <IconButton
+              type="button"
+              size="sm"
+              onClick={() =>
+                setShowConfirmPassword(
+                  (
+                    value
+                  ) =>
+                    !value
+                )
+              }
+              aria-label={
+                showConfirmPassword
+                  ? "Hide password"
+                  : "Show password"
+              }
+              className="
+                absolute
+                right-1.5
+                top-1/2
+                h-8
+                w-8
+                -translate-y-1/2
+              "
+            >
+              {showConfirmPassword ? (
+                <EyeOff
+                  size={15}
+                />
+              ) : (
+                <Eye
+                  size={15}
+                />
+              )}
+            </IconButton>
+          </div>
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="
+              rounded-xl
+              border
+              border-red-400/[0.12]
+              bg-red-400/[0.06]
+              px-3
+              py-2.5
+              text-xs
+              leading-5
+              text-red-300
+            "
+          >
+            {error}
           </div>
         )}
 
-        {/* UPDATE */}
-
-        <button
+        <Button
           type="submit"
-          disabled={loading}
-          className="
-            h-11 w-full rounded-xl
-            bg-white
-            text-sm font-semibold
-            text-black
-            transition
-            hover:bg-slate-200
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-          "
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={
+            loading
+          }
+          className="h-11"
         >
-          {loading
-            ? "Updating password..."
-            : "Update password"}
-        </button>
-      </form>
+          {loading ? (
+            <>
+              <Spinner
+                size={15}
+              />
 
-      <p className="mt-6 text-center text-sm text-slate-500">
-        <Link
-          href="/login"
-          className="
-            font-medium
-            text-white
-            transition
-            hover:text-cyan-300
-          "
-        >
-          Back to login
-        </Link>
-      </p>
+              Updating password...
+            </>
+          ) : (
+            "Update password"
+          )}
+        </Button>
+      </form>
     </AuthShell>
   );
 }

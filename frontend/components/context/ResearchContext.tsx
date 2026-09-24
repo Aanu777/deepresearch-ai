@@ -10,13 +10,16 @@ import {
 } from "react";
 
 import {
+  cancelResearch,
   createResearch,
   getResearch,
   getResearchHistory,
   sendResearchQuestion,
 } from "@/lib/research";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
 // ============================================================
 // TYPES
@@ -100,12 +103,16 @@ type ContextType = {
 
   loading: boolean;
 
+  cancelling: boolean;
+
   historyLoading: boolean;
 
   createJob: (
     query: string,
     pdfFile?: File | null
   ) => Promise<void>;
+
+  cancelJob: () => Promise<void>;
 
   refresh: () => Promise<void>;
 
@@ -119,7 +126,9 @@ type ContextType = {
 };
 
 const ResearchContext =
-  createContext<ContextType | null>(null);
+  createContext<ContextType | null>(
+    null
+  );
 
 // ============================================================
 // PROVIDER
@@ -130,60 +139,89 @@ export function ResearchProvider({
 }: {
   children: ReactNode;
 }) {
-  // ==========================================================
-  // SUPABASE
-  // ==========================================================
+  const supabase =
+    createClient();
 
-  const supabase = createClient();
-
-  // ==========================================================
-  // AUTH STATE
-  // ==========================================================
-
-  const [authenticated, setAuthenticated] =
+  const [
+    authenticated,
+    setAuthenticated,
+  ] =
     useState(false);
 
   const authInitialized =
     useRef(false);
 
-  // ==========================================================
-  // CURRENT JOB
-  // ==========================================================
-
-  const [job, setJob] =
-    useState<ResearchJob | null>(null);
-
-  // ==========================================================
-  // HISTORY
-  // ==========================================================
-
-  const [chats, setChats] =
-    useState<ResearchJob[]>([]);
-
-  const [activeChatId, setActiveChatId] =
-    useState<string | null>(null);
-
-  // ==========================================================
-  // LOADING
-  // ==========================================================
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [historyLoading, setHistoryLoading] =
-    useState(false);
-
-  // ==========================================================
-  // REFS
-  // ==========================================================
-
-  const activeJobId =
-    useRef<string | null>(null);
-
-  const pollingTimer =
-    useRef<ReturnType<typeof setTimeout> | null>(
+  const [
+    job,
+    setJob,
+  ] =
+    useState<ResearchJob | null>(
       null
     );
+
+  const [
+    chats,
+    setChats,
+  ] =
+    useState<ResearchJob[]>(
+      []
+    );
+
+  const [
+    activeChatId,
+    setActiveChatId,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(false);
+
+  const [
+    cancelling,
+    setCancelling,
+  ] =
+    useState(false);
+
+  const [
+    historyLoading,
+    setHistoryLoading,
+  ] =
+    useState(false);
+
+  const activeJobId =
+    useRef<string | null>(
+      null
+    );
+
+  const pollingTimer =
+    useRef<ReturnType<
+      typeof setTimeout
+    > | null>(
+      null
+    );
+
+  // ==========================================================
+  // TERMINAL STATUS
+  // ==========================================================
+
+  function isTerminalStatus(
+    status?: string
+  ) {
+    return [
+      "completed",
+      "failed",
+      "cancelled",
+    ].includes(
+      (
+        status || ""
+      ).toLowerCase()
+    );
+  }
 
   // ==========================================================
   // STOP POLLING
@@ -191,7 +229,8 @@ export function ResearchProvider({
 
   function stopPolling() {
     if (
-      pollingTimer.current !== null
+      pollingTimer.current !==
+      null
     ) {
       clearTimeout(
         pollingTimer.current
@@ -203,7 +242,7 @@ export function ResearchProvider({
   }
 
   // ==========================================================
-  // UPDATE HISTORY
+  // HISTORY UPDATE
   // ==========================================================
 
   function updateChatHistory(
@@ -241,10 +280,6 @@ export function ResearchProvider({
   // ==========================================================
 
   async function refreshChats() {
-    // IMPORTANT:
-    // Never call the protected backend endpoint
-    // when there is no authenticated Supabase session.
-
     if (!authenticated) {
       setChats([]);
       return;
@@ -259,12 +294,17 @@ export function ResearchProvider({
       const jobs: ResearchJob[] =
         Array.isArray(data)
           ? data
-          : Array.isArray(data?.jobs)
+          : Array.isArray(
+                data?.jobs
+              )
             ? data.jobs
             : [];
 
       jobs.sort(
-        (a, b) => {
+        (
+          a,
+          b
+        ) => {
           const dateA =
             a.created_at
               ? new Date(
@@ -279,23 +319,29 @@ export function ResearchProvider({
                 ).getTime()
               : 0;
 
-          return dateB - dateA;
+          return (
+            dateB - dateA
+          );
         }
       );
 
-      setChats(jobs);
+      setChats(
+        jobs
+      );
     } catch (error) {
       console.error(
         "Failed to load research history:",
         error
       );
     } finally {
-      setHistoryLoading(false);
+      setHistoryLoading(
+        false
+      );
     }
   }
 
   // ==========================================================
-  // AUTHENTICATION INITIALIZATION
+  // AUTH
   // ==========================================================
 
   useEffect(() => {
@@ -312,7 +358,9 @@ export function ResearchProvider({
       }
 
       setAuthenticated(
-        Boolean(data.session)
+        Boolean(
+          data.session
+        )
       );
 
       authInitialized.current =
@@ -325,20 +373,26 @@ export function ResearchProvider({
       data: authListener,
     } =
       supabase.auth.onAuthStateChange(
-        (_event, session) => {
+        (
+          _event,
+          session
+        ) => {
           if (!mounted) {
             return;
           }
 
           const isAuthenticated =
-            Boolean(session);
+            Boolean(
+              session
+            );
 
           setAuthenticated(
             isAuthenticated
           );
 
-          // User logged out.
-          if (!isAuthenticated) {
+          if (
+            !isAuthenticated
+          ) {
             stopPolling();
 
             activeJobId.current =
@@ -348,18 +402,22 @@ export function ResearchProvider({
               null
             );
 
-            setJob(null);
+            setJob(
+              null
+            );
 
-            setChats([]);
+            setChats(
+              []
+            );
 
-            setLoading(false);
+            setLoading(
+              false
+            );
 
-            return;
+            setCancelling(
+              false
+            );
           }
-
-          // User logged in.
-          // History loading is handled by the
-          // authenticated effect below.
         }
       );
 
@@ -371,20 +429,26 @@ export function ResearchProvider({
   }, []);
 
   // ==========================================================
-  // LOAD HISTORY AFTER AUTHENTICATION
+  // LOAD HISTORY
   // ==========================================================
 
   useEffect(() => {
-    if (!authInitialized.current) {
+    if (
+      !authInitialized.current
+    ) {
       return;
     }
 
-    if (!authenticated) {
+    if (
+      !authenticated
+    ) {
       return;
     }
 
     refreshChats();
-  }, [authenticated]);
+  }, [
+    authenticated,
+  ]);
 
   // ==========================================================
   // REFRESH CURRENT JOB
@@ -394,7 +458,10 @@ export function ResearchProvider({
     const jobId =
       activeJobId.current;
 
-    if (!jobId || !authenticated) {
+    if (
+      !jobId ||
+      !authenticated
+    ) {
       return;
     }
 
@@ -411,7 +478,9 @@ export function ResearchProvider({
         return;
       }
 
-      setJob(updated);
+      setJob(
+        updated
+      );
 
       updateChatHistory(
         updated
@@ -449,7 +518,9 @@ export function ResearchProvider({
           return;
         }
 
-        if (!authenticated) {
+        if (
+          !authenticated
+        ) {
           stopPolling();
           return;
         }
@@ -467,17 +538,18 @@ export function ResearchProvider({
             return;
           }
 
-          setJob(updated);
+          setJob(
+            updated
+          );
 
           updateChatHistory(
             updated
           );
 
           if (
-            updated.status ===
-              "completed" ||
-            updated.status ===
-              "failed"
+            isTerminalStatus(
+              updated.status
+            )
           ) {
             pollingTimer.current =
               null;
@@ -490,6 +562,7 @@ export function ResearchProvider({
               poll,
               1000
             );
+
         } catch (error) {
           console.error(
             "Research polling error:",
@@ -513,7 +586,7 @@ export function ResearchProvider({
   }
 
   // ==========================================================
-  // CREATE OR CONTINUE RESEARCH
+  // CREATE / CONTINUE
   // ==========================================================
 
   async function createJob(
@@ -529,12 +602,15 @@ export function ResearchProvider({
     const cleanQuery =
       query.trim();
 
-    if (!cleanQuery) {
+    if (
+      !cleanQuery &&
+      !pdfFile
+    ) {
       return;
     }
 
     // ========================================================
-    // EXISTING ACTIVE RESEARCH CHAT
+    // EXISTING RESEARCH CONVERSATION
     // ========================================================
 
     if (
@@ -545,7 +621,9 @@ export function ResearchProvider({
 
       stopPolling();
 
-      setLoading(true);
+      setLoading(
+        true
+      );
 
       try {
         const response =
@@ -575,7 +653,9 @@ export function ResearchProvider({
           return;
         }
 
-        setJob(updated);
+        setJob(
+          updated
+        );
 
         updateChatHistory(
           updated
@@ -584,6 +664,7 @@ export function ResearchProvider({
         startPolling(
           existingJobId
         );
+
       } catch (error) {
         console.error(
           "Failed to continue research:",
@@ -591,15 +672,18 @@ export function ResearchProvider({
         );
 
         throw error;
+
       } finally {
-        setLoading(false);
+        setLoading(
+          false
+        );
       }
 
       return;
     }
 
     // ========================================================
-    // NEW RESEARCH CONVERSATION
+    // NEW RESEARCH
     // ========================================================
 
     stopPolling();
@@ -611,9 +695,13 @@ export function ResearchProvider({
       null
     );
 
-    setJob(null);
+    setJob(
+      null
+    );
 
-    setLoading(true);
+    setLoading(
+      true
+    );
 
     try {
       const response =
@@ -659,10 +747,9 @@ export function ResearchProvider({
       );
 
       if (
-        firstState.status !==
-          "completed" &&
-        firstState.status !==
-          "failed"
+        !isTerminalStatus(
+          firstState.status
+        )
       ) {
         startPolling(
           jobId
@@ -670,6 +757,7 @@ export function ResearchProvider({
       }
 
       await refreshChats();
+
     } catch (error) {
       console.error(
         "Failed to create research job:",
@@ -680,23 +768,102 @@ export function ResearchProvider({
         activeJobId.current ===
         null
       ) {
-        setJob(null);
+        setJob(
+          null
+        );
       }
 
       throw error;
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
   // ==========================================================
-  // SELECT EXISTING RESEARCH CHAT
+  // CANCEL JOB
+  // ==========================================================
+
+  async function cancelJob() {
+    const jobId =
+      activeJobId.current;
+
+    if (
+      !jobId ||
+      !authenticated ||
+      cancelling
+    ) {
+      return;
+    }
+
+    if (
+      isTerminalStatus(
+        job?.status
+      )
+    ) {
+      return;
+    }
+
+    setCancelling(
+      true
+    );
+
+    try {
+      await cancelResearch(
+        jobId
+      );
+
+      stopPolling();
+
+      const updated =
+        await getResearch(
+          jobId
+        );
+
+      if (
+        activeJobId.current !==
+        jobId
+      ) {
+        return;
+      }
+
+      setJob(
+        updated
+      );
+
+      updateChatHistory(
+        updated
+      );
+
+      await refreshChats();
+
+    } catch (error) {
+      console.error(
+        "Failed to cancel research:",
+        error
+      );
+
+      throw error;
+
+    } finally {
+      setCancelling(
+        false
+      );
+    }
+  }
+
+  // ==========================================================
+  // SELECT CHAT
   // ==========================================================
 
   async function selectChat(
     jobId: string
   ) {
-    if (!authenticated) {
+    if (
+      !authenticated
+    ) {
       return;
     }
 
@@ -716,7 +883,9 @@ export function ResearchProvider({
       jobId
     );
 
-    setLoading(true);
+    setLoading(
+      true
+    );
 
     try {
       const selectedJob =
@@ -740,27 +909,30 @@ export function ResearchProvider({
       );
 
       if (
-        selectedJob.status !==
-          "completed" &&
-        selectedJob.status !==
-          "failed"
+        !isTerminalStatus(
+          selectedJob.status
+        )
       ) {
         startPolling(
           jobId
         );
       }
+
     } catch (error) {
       console.error(
         "Failed to load research chat:",
         error
       );
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
   // ==========================================================
-  // NEW RESEARCH CONVERSATION
+  // NEW CHAT
   // ==========================================================
 
   function newChat() {
@@ -777,7 +949,13 @@ export function ResearchProvider({
       null
     );
 
-    setLoading(false);
+    setLoading(
+      false
+    );
+
+    setCancelling(
+      false
+    );
   }
 
   // ==========================================================
@@ -808,9 +986,13 @@ export function ResearchProvider({
 
         loading,
 
+        cancelling,
+
         historyLoading,
 
         createJob,
+
+        cancelJob,
 
         refresh,
 

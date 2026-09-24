@@ -7,35 +7,84 @@ import {
 
 import Link from "next/link";
 
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Mail,
+} from "lucide-react";
+
 import AuthShell from "@/components/auth/AuthShell";
-import { createClient } from "@/lib/supabase/client";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+import {
+  Button,
+  Input,
+  Spinner,
+} from "@/components/ui";
 
 export default function ForgotPasswordPage() {
-  const supabase = createClient();
+  const supabase =
+    createClient();
 
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [
+    email,
+    setEmail,
+  ] =
+    useState("");
+
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(false);
+
+  const [
+    error,
+    setError,
+  ] =
+    useState("");
+
+  const [
+    success,
+    setSuccess,
+  ] =
+    useState(false);
+
+  // ==========================================================
+  // SEND RESET EMAIL
+  // ==========================================================
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
 
+    if (loading) {
+      return;
+    }
+
+    const cleanEmail =
+      email.trim();
+
+    if (!cleanEmail) {
+      setError(
+        "Enter your email address."
+      );
+
+      return;
+    }
+
     setError("");
-    setMessage("");
     setLoading(true);
 
     try {
-      const cleanEmail = email.trim();
-
-      if (!cleanEmail) {
-        setError("Please enter your email address.");
-        return;
-      }
-
-      const { error: resetError } =
+      const {
+        error:
+          resetError,
+      } =
         await supabase.auth.resetPasswordForEmail(
           cleanEmail,
           {
@@ -48,71 +97,175 @@ export default function ForgotPasswordPage() {
         throw resetError;
       }
 
-      setMessage(
-        "If an account exists for that email, we've sent you a password reset link."
+      setSuccess(
+        true
       );
+
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to send the password reset email."
+          : "Unable to send reset email."
       );
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
+
+  // ==========================================================
+  // SUCCESS
+  // ==========================================================
+
+  if (success) {
+    return (
+      <AuthShell
+        title="Check your email"
+        subtitle="We sent you a password reset link."
+      >
+        <div className="text-center">
+          <div
+            className="
+              mx-auto
+              flex
+              h-11
+              w-11
+              items-center
+              justify-center
+              rounded-full
+              bg-emerald-400/[0.08]
+              text-emerald-300
+            "
+          >
+            <CheckCircle2
+              size={20}
+            />
+          </div>
+
+          <p
+            className="
+              mt-4
+              text-sm
+              leading-6
+              text-white/40
+            "
+          >
+            If an account exists for{" "}
+            <span className="font-medium text-white/70">
+              {email}
+            </span>
+            , you&apos;ll receive a link to reset your password.
+          </p>
+
+          <Link
+            href="/login"
+            className="
+              mt-6
+              inline-flex
+              items-center
+              gap-2
+              text-sm
+              font-medium
+              text-white/55
+              transition-colors
+              duration-150
+              hover:text-white
+            "
+          >
+            <ArrowLeft
+              size={15}
+            />
+
+            Back to login
+          </Link>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  // ==========================================================
+  // FORM
+  // ==========================================================
 
   return (
     <AuthShell
       title="Reset your password"
-      subtitle="Enter your email and we'll send you a secure reset link."
+      subtitle="Enter your email and we'll send you a reset link."
     >
       <form
-        onSubmit={handleSubmit}
-        className="space-y-5"
+        onSubmit={
+          handleSubmit
+        }
+        className="space-y-4"
       >
-        {/* EMAIL */}
-
         <div>
-          <label className="mb-2 block text-xs font-medium text-slate-400">
+          <label
+            htmlFor="reset-email"
+            className="
+              mb-1.5
+              block
+              text-xs
+              font-medium
+              text-white/45
+            "
+          >
             Email
           </label>
 
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            placeholder="you@example.com"
-            className="
-              h-11 w-full rounded-xl
-              border border-white/[0.08]
-              bg-white/[0.025]
-              px-3.5
-              text-sm text-white
-              outline-none
-              transition
-              placeholder:text-slate-700
-              focus:border-cyan-400/40
-              focus:bg-white/[0.04]
-            "
-          />
-        </div>
+          <div className="relative">
+            <Input
+              id="reset-email"
+              type="email"
+              required
+              autoComplete="email"
+              value={
+                email
+              }
+              onChange={(
+                event
+              ) =>
+                setEmail(
+                  event.target.value
+                )
+              }
+              placeholder="you@example.com"
+              disabled={
+                loading
+              }
+              className="
+                h-11
+                pl-10
+              "
+            />
 
-        {/* ERROR */}
+            <Mail
+              size={15}
+              className="
+                pointer-events-none
+                absolute
+                left-3.5
+                top-1/2
+                -translate-y-1/2
+                text-white/25
+              "
+            />
+          </div>
+        </div>
 
         {error && (
           <div
             role="alert"
             className="
               rounded-xl
-              border border-red-400/10
+              border
+              border-red-400/[0.12]
               bg-red-400/[0.06]
-              px-3 py-2.5
-              text-xs leading-5
+              px-3
+              py-2.5
+              text-xs
+              leading-5
               text-red-300
             "
           >
@@ -120,63 +273,51 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        {/* SUCCESS */}
-
-        {message && (
-          <div
-            role="status"
-            className="
-              rounded-xl
-              border border-cyan-400/10
-              bg-cyan-400/[0.06]
-              px-3 py-3
-              text-xs leading-5
-              text-cyan-300
-            "
-          >
-            {message}
-          </div>
-        )}
-
-        {/* SUBMIT */}
-
-        <button
+        <Button
           type="submit"
-          disabled={loading}
-          className="
-            h-11 w-full rounded-xl
-            bg-white
-            text-sm font-semibold
-            text-black
-            transition
-            hover:bg-slate-200
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-          "
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={
+            loading
+          }
+          className="h-11"
         >
-          {loading
-            ? "Sending reset link..."
-            : "Send reset link"}
-        </button>
+          {loading ? (
+            <>
+              <Spinner
+                size={15}
+              />
+
+              Sending link...
+            </>
+          ) : (
+            "Send reset link"
+          )}
+        </Button>
       </form>
 
-      {/* BACK TO LOGIN */}
+      <Link
+        href="/login"
+        className="
+          mt-6
+          flex
+          items-center
+          justify-center
+          gap-2
+          text-sm
+          text-white/35
+          transition-colors
+          duration-150
+          hover:text-white/70
+        "
+      >
+        <ArrowLeft
+          size={15}
+        />
 
-      <p className="mt-6 text-center text-sm text-slate-500">
-        Remember your password?{" "}
-
-        <Link
-          href="/login"
-          className="
-            font-medium
-            text-white
-            transition
-            hover:text-cyan-300
-          "
-        >
-          Log in
-        </Link>
-      </p>
+        Back to login
+      </Link>
     </AuthShell>
   );
 }

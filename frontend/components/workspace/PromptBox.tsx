@@ -1,17 +1,19 @@
 "use client";
 
 import {
+  useEffect,
   useRef,
   useState,
 } from "react";
 
 import {
   ArrowUp,
+  FileText,
   Loader2,
   Paperclip,
   Sparkles,
+  Square,
   X,
-  FileText,
 } from "lucide-react";
 
 import {
@@ -21,31 +23,89 @@ import {
 import TemplatePicker from "./TemplatePicker";
 
 export default function PromptBox() {
-  const [prompt, setPrompt] =
-    useState("");
+  const [
+    prompt,
+    setPrompt,
+  ] = useState("");
 
-  const [pdfFile, setPdfFile] =
-    useState<File | null>(null);
+  const [
+    pdfFile,
+    setPdfFile,
+  ] = useState<File | null>(
+    null
+  );
 
-  const [templatesOpen, setTemplatesOpen] =
-    useState(false);
+  const [
+    templatesOpen,
+    setTemplatesOpen,
+  ] = useState(false);
 
   const fileInputRef =
     useRef<HTMLInputElement | null>(
       null
     );
 
+  const textareaRef =
+    useRef<HTMLTextAreaElement | null>(
+      null
+    );
+
   const {
+    job,
     createJob,
+    cancelJob,
     loading,
+    cancelling,
   } = useResearch();
 
-  // ============================================================
-  // PDF SELECTION
-  // ============================================================
+  // ==========================================================
+  // JOB STATE
+  // ==========================================================
+
+  const status =
+    (
+      job?.status ||
+      ""
+    ).toLowerCase();
+
+  const researchRunning =
+    status === "running" ||
+    status === "queued";
+
+  // ==========================================================
+  // AUTO RESIZE
+  // ==========================================================
+
+  useEffect(() => {
+    const textarea =
+      textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height =
+      "auto";
+
+    textarea.style.height =
+      `${Math.min(
+        Math.max(
+          textarea.scrollHeight,
+          80
+        ),
+        220
+      )}px`;
+  }, [prompt]);
+
+  // ==========================================================
+  // PDF
+  // ==========================================================
 
   function handleAttachPDF() {
-    if (loading) {
+    if (
+      loading ||
+      researchRunning
+    ) {
       return;
     }
 
@@ -53,18 +113,14 @@ export default function PromptBox() {
   }
 
   function handleFileChange(
-    e: React.ChangeEvent<HTMLInputElement>
+    event: React.ChangeEvent<HTMLInputElement>
   ) {
     const file =
-      e.target.files?.[0];
+      event.target.files?.[0];
 
     if (!file) {
       return;
     }
-
-    // ----------------------------------------------------------
-    // Only allow PDF files.
-    // ----------------------------------------------------------
 
     if (
       file.type !==
@@ -77,84 +133,80 @@ export default function PromptBox() {
         "Please select a PDF file."
       );
 
-      e.target.value = "";
+      event.target.value = "";
 
       return;
     }
 
     setPdfFile(file);
 
-    // ----------------------------------------------------------
-    // Allow selecting the same file again later.
-    // ----------------------------------------------------------
-
-    e.target.value = "";
+    event.target.value = "";
   }
 
   function removePDF() {
-    setPdfFile(null);
-  }
-
-  // ============================================================
-  // TEMPLATE SELECTION
-  // ============================================================
-
-  function openTemplates() {
-    if (loading) {
+    if (
+      loading ||
+      researchRunning
+    ) {
       return;
     }
 
-    setTemplatesOpen(true);
+    setPdfFile(null);
   }
 
-  function closeTemplates() {
-    setTemplatesOpen(false);
-  }
+  // ==========================================================
+  // TEMPLATE
+  // ==========================================================
 
   function handleTemplateSelect(
     templatePrompt: string
   ) {
-    setPrompt(templatePrompt);
+    setPrompt(
+      templatePrompt
+    );
 
     setTemplatesOpen(false);
+
+    requestAnimationFrame(
+      () => {
+        textareaRef.current?.focus();
+      }
+    );
   }
 
-  // ============================================================
+  // ==========================================================
   // SUBMIT
-  // ============================================================
+  // ==========================================================
 
   async function handleSubmit() {
     const trimmed =
       prompt.trim();
 
-    // ----------------------------------------------------------
-    // No PDF + empty prompt -> reject
-    // ----------------------------------------------------------
-
     if (
-      !pdfFile &&
-      trimmed.length === 0
+      loading ||
+      researchRunning ||
+      (
+        !pdfFile &&
+        !trimmed
+      )
     ) {
-      alert(
-        "Please enter a research question or attach a PDF."
-      );
-
       return;
     }
-
-    // ----------------------------------------------------------
-    // PDF + empty prompt is allowed.
-    // PDF + prompt is allowed.
-    // Short prompts are intentionally allowed.
-    // ----------------------------------------------------------
 
     try {
       await createJob(
         trimmed,
-        pdfFile ?? undefined
+        pdfFile
       );
-    } catch (err) {
-      console.error(err);
+
+      setPrompt("");
+      setPdfFile(null);
+
+    } catch (error) {
+      console.error(
+        "Failed to start research:",
+        error
+      );
 
       alert(
         "Failed to start research."
@@ -162,347 +214,690 @@ export default function PromptBox() {
     }
   }
 
-  // ============================================================
-  // KEYBOARD
-  // ============================================================
+  // ==========================================================
+  // CANCEL
+  // ==========================================================
 
-  function handleKeyDown(
-    e: React.KeyboardEvent<HTMLTextAreaElement>
-  ) {
+  async function handleCancel() {
     if (
-      e.key === "Enter" &&
-      e.ctrlKey
+      !researchRunning ||
+      cancelling
     ) {
-      e.preventDefault();
+      return;
+    }
 
-      handleSubmit();
+    try {
+      await cancelJob();
+
+    } catch (error) {
+      console.error(
+        "Failed to cancel research:",
+        error
+      );
+
+      alert(
+        "Failed to cancel research."
+      );
     }
   }
 
-  // ============================================================
+  // ==========================================================
+  // KEYBOARD
+  // ==========================================================
+
+  function handleKeyDown(
+    event: React.KeyboardEvent<HTMLTextAreaElement>
+  ) {
+    if (
+      event.key ===
+        "Enter" &&
+      event.ctrlKey
+    ) {
+      event.preventDefault();
+
+      void handleSubmit();
+    }
+  }
+
+  // ==========================================================
+  // BUTTON STATE
+  // ==========================================================
+
+  const canSubmit =
+    !loading &&
+    !researchRunning &&
+    (
+      prompt.trim().length >
+        0 ||
+      Boolean(pdfFile)
+    );
+
+  // ==========================================================
   // UI
-  // ============================================================
+  // ==========================================================
 
   return (
     <>
-      <section>
-        <div className="mx-auto max-w-5xl">
+      <div
+        className="
+          overflow-hidden
+
+          rounded-[26px]
+
+          border
+          border-white/[0.09]
+
+          bg-[#191919]
+
+          shadow-[0_10px_35px_rgba(0,0,0,0.20)]
+
+          transition-colors
+
+          focus-within:border-white/[0.15]
+        "
+      >
+        {/* ====================================================
+            TEXTAREA
+        ==================================================== */}
+
+        <textarea
+          ref={textareaRef}
+          value={prompt}
+          onChange={(
+            event
+          ) =>
+            setPrompt(
+              event.target.value
+            )
+          }
+          onKeyDown={
+            handleKeyDown
+          }
+          disabled={
+            loading ||
+            researchRunning
+          }
+          rows={2}
+          placeholder={
+            researchRunning
+              ? "Research is currently running..."
+              : "Ask a research question..."
+          }
+          className="
+            block
+
+            min-h-[80px]
+            w-full
+
+            resize-none
+            overflow-y-auto
+
+            appearance-none
+
+            !border-0
+            !border-transparent
+            !border-b-0
+
+            bg-transparent
+
+            px-5
+            pb-3
+            pt-4
+
+            text-[15px]
+            leading-6
+            text-white
+
+            !outline-none
+            outline-none
+
+            !ring-0
+            ring-0
+
+            !shadow-none
+            shadow-none
+
+            placeholder:text-white/30
+
+            focus:!border-0
+            focus:!border-transparent
+            focus:!border-b-0
+
+            focus:!outline-none
+            focus:!ring-0
+            focus:!shadow-none
+
+            focus-visible:!border-0
+            focus-visible:!border-transparent
+            focus-visible:!border-b-0
+
+            focus-visible:!outline-none
+            focus-visible:!ring-0
+            focus-visible:!shadow-none
+
+            disabled:cursor-not-allowed
+            disabled:opacity-60
+          "
+          style={{
+            maxHeight:
+              "220px",
+
+            border:
+              "none",
+
+            borderBottom:
+              "none",
+
+            outline:
+              "none",
+
+            boxShadow:
+              "none",
+
+            WebkitAppearance:
+              "none",
+
+            appearance:
+              "none",
+          }}
+        />
+
+        {/* ====================================================
+            PDF
+        ==================================================== */}
+
+        {pdfFile && (
           <div
             className="
-              overflow-hidden
-              rounded-[32px]
+              mx-3
+              mb-2
+
+              flex
+              max-w-md
+              items-center
+              gap-3
+
+              rounded-xl
+
               border
-              border-cyan-500/30
-              bg-[#0B1118]
-              shadow-[0_20px_80px_rgba(0,0,0,.45)]
-              transition-all
-              duration-300
-              focus-within:border-cyan-400
+              border-white/[0.08]
+
+              bg-white/[0.035]
+
+              px-3
+              py-2.5
             "
           >
-            {/* ================================================== */}
-            {/* PROMPT */}
-            {/* ================================================== */}
-
-            <textarea
-              rows={8}
-              value={prompt}
-              onChange={(e) =>
-                setPrompt(
-                  e.target.value
-                )
-              }
-              onKeyDown={
-                handleKeyDown
-              }
-              disabled={loading}
-              placeholder="Ask anything... Research a topic, compare technologies, analyze a company, summarize scientific papers..."
+            <div
               className="
-                min-h-[230px]
-                w-full
-                resize-none
-                bg-transparent
-                px-8
-                pt-8
-                text-lg
-                text-white
-                outline-none
-                placeholder:text-slate-500
-                disabled:cursor-not-allowed
-                disabled:opacity-70
+                flex
+                h-8
+                w-8
+                shrink-0
+                items-center
+                justify-center
+
+                rounded-lg
+
+                bg-white/[0.05]
               "
-            />
-
-            {/* ================================================== */}
-            {/* ATTACHED PDF */}
-            {/* ================================================== */}
-
-            {pdfFile && (
-              <div
+            >
+              <FileText
+                size={15}
                 className="
-                  mx-6
-                  mb-4
-                  flex
-                  items-center
-                  justify-between
-                  rounded-2xl
-                  border
-                  border-cyan-400/20
-                  bg-cyan-400/5
-                  px-4
-                  py-3
+                  text-white/50
+                "
+              />
+            </div>
+
+            <div
+              className="
+                min-w-0
+                flex-1
+              "
+            >
+              <p
+                className="
+                  truncate
+
+                  text-xs
+                  font-medium
+                  text-white/70
                 "
               >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div
+                {pdfFile.name}
+              </p>
+
+              <p
+                className="
+                  mt-0.5
+
+                  text-[10px]
+                  text-white/25
+                "
+              >
+                {(
+                  pdfFile.size /
+                  1024 /
+                  1024
+                ).toFixed(2)}{" "}
+                MB
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={
+                removePDF
+              }
+              disabled={
+                loading ||
+                researchRunning
+              }
+              aria-label="Remove PDF"
+              className="
+                flex
+                h-7
+                w-7
+                items-center
+                justify-center
+
+                rounded-lg
+
+                border-0
+                bg-transparent
+
+                text-white/30
+
+                !outline-none
+
+                transition-colors
+
+                hover:bg-white/[0.06]
+                hover:text-white/70
+
+                focus:!outline-none
+                focus-visible:!outline-none
+                focus-visible:!ring-0
+
+                disabled:cursor-not-allowed
+                disabled:opacity-40
+              "
+            >
+              <X
+                size={14}
+              />
+            </button>
+          </div>
+        )}
+
+        {/* ====================================================
+            CONTROLS
+        ==================================================== */}
+
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+            gap-3
+
+            px-3
+            pb-3
+          "
+        >
+          {/* ==================================================
+              LEFT
+          ================================================== */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-1
+            "
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={
+                handleFileChange
+              }
+              className="hidden"
+            />
+
+            <button
+              type="button"
+              onClick={
+                handleAttachPDF
+              }
+              disabled={
+                loading ||
+                researchRunning
+              }
+              title="Attach PDF"
+              className="
+                flex
+                h-9
+                w-9
+                items-center
+                justify-center
+
+                rounded-full
+
+                border-0
+                bg-transparent
+
+                text-white/50
+
+                !outline-none
+
+                transition-colors
+
+                hover:bg-white/[0.07]
+                hover:text-white
+
+                focus:!outline-none
+                focus-visible:!outline-none
+                focus-visible:!ring-0
+
+                disabled:cursor-not-allowed
+                disabled:opacity-30
+              "
+            >
+              <Paperclip
+                size={18}
+              />
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setTemplatesOpen(
+                  true
+                )
+              }
+              disabled={
+                loading ||
+                researchRunning
+              }
+              title="Research templates"
+              className="
+                flex
+                h-9
+                items-center
+                gap-2
+
+                rounded-full
+
+                border-0
+                bg-transparent
+
+                px-3
+
+                text-xs
+                font-medium
+                text-white/45
+
+                !outline-none
+
+                transition-colors
+
+                hover:bg-white/[0.07]
+                hover:text-white/80
+
+                focus:!outline-none
+                focus-visible:!outline-none
+                focus-visible:!ring-0
+
+                disabled:cursor-not-allowed
+                disabled:opacity-30
+              "
+            >
+              <Sparkles
+                size={16}
+              />
+
+              <span
+                className="
+                  hidden
+                  sm:inline
+                "
+              >
+                Templates
+              </span>
+            </button>
+          </div>
+
+          {/* ==================================================
+              RIGHT
+          ================================================== */}
+
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+            {researchRunning ? (
+              <>
+                <div
+                  className="
+                    hidden
+                    items-center
+                    gap-2
+
+                    text-[11px]
+                    text-white/30
+
+                    sm:flex
+                  "
+                >
+                  <Loader2
+                    size={13}
                     className="
-                      flex
-                      h-9
-                      w-9
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-cyan-400/10
+                      animate-spin
                     "
-                  >
-                    <FileText
-                      size={18}
-                      className="text-cyan-400"
-                    />
-                  </div>
+                  />
 
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">
-                      {pdfFile.name}
-                    </p>
-
-                    <p className="text-xs text-slate-500">
-                      {(
-                        pdfFile.size /
-                        1024 /
-                        1024
-                      ).toFixed(2)}{" "}
-                      MB
-                    </p>
-                  </div>
+                  <span>
+                    Researching
+                  </span>
                 </div>
 
                 <button
                   type="button"
                   onClick={
-                    removePDF
-                  }
-                  disabled={loading}
-                  className="
-                    ml-3
-                    rounded-lg
-                    p-2
-                    text-slate-500
-                    transition
-                    hover:bg-white/5
-                    hover:text-white
-                    disabled:cursor-not-allowed
-                    disabled:opacity-50
-                  "
-                  aria-label="Remove PDF"
-                >
-                  <X size={17} />
-                </button>
-              </div>
-            )}
-
-            {/* ================================================== */}
-            {/* CONTROLS */}
-            {/* ================================================== */}
-
-            <div
-              className="
-                flex
-                flex-col
-                gap-4
-                border-t
-                border-white/10
-                px-6
-                py-5
-                sm:flex-row
-                sm:items-center
-                sm:justify-between
-              "
-            >
-              <div className="flex items-center gap-3">
-                {/* Hidden file input */}
-
-                <input
-                  ref={
-                    fileInputRef
-                  }
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  onChange={
-                    handleFileChange
-                  }
-                  className="hidden"
-                />
-
-                {/* ================================================= */}
-                {/* ATTACH PDF */}
-                {/* ================================================= */}
-
-                <button
-                  type="button"
-                  onClick={
-                    handleAttachPDF
+                    handleCancel
                   }
                   disabled={
-                    loading
+                    cancelling
                   }
+                  title="Cancel research"
                   className="
                     flex
+                    h-9
                     items-center
                     gap-2
-                    rounded-xl
+
+                    rounded-full
+
                     border
-                    border-white/10
-                    px-4
-                    py-2
-                    text-sm
-                    text-slate-300
-                    transition
-                    hover:border-cyan-400/40
-                    hover:bg-white/5
+                    border-white/[0.10]
+
+                    bg-transparent
+
+                    px-3.5
+
+                    text-xs
+                    font-medium
+                    text-white/55
+
+                    !outline-none
+
+                    transition-colors
+
+                    hover:border-red-400/20
+                    hover:bg-red-400/[0.05]
+                    hover:text-red-300
+
+                    focus:!outline-none
+                    focus-visible:!outline-none
+                    focus-visible:!ring-0
+
                     disabled:cursor-not-allowed
-                    disabled:opacity-50
+                    disabled:opacity-40
                   "
                 >
-                  <Paperclip
-                    size={16}
-                  />
+                  {cancelling ? (
+                    <Loader2
+                      size={13}
+                      className="
+                        animate-spin
+                      "
+                    />
+                  ) : (
+                    <Square
+                      size={11}
+                      fill="currentColor"
+                    />
+                  )}
 
-                  {pdfFile
-                    ? "Change PDF"
-                    : "Attach PDF"}
+                  <span>
+                    {cancelling
+                      ? "Cancelling"
+                      : "Cancel"}
+                  </span>
                 </button>
-
-                {/* ================================================= */}
-                {/* TEMPLATES */}
-                {/* ================================================= */}
-
-                <button
-                  type="button"
-                  onClick={
-                    openTemplates
-                  }
-                  disabled={
-                    loading
-                  }
+              </>
+            ) : (
+              <>
+                <span
                   className="
-                    group
-                    flex
-                    items-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-white/10
-                    px-4
-                    py-2
-                    text-sm
-                    text-slate-300
-                    transition
-                    hover:border-cyan-400/40
-                    hover:bg-white/5
-                    hover:text-white
-                    disabled:cursor-not-allowed
-                    disabled:opacity-50
+                    hidden
+
+                    text-[10px]
+                    text-white/20
+
+                    sm:inline
                   "
                 >
-                  <Sparkles
-                    size={16}
-                    className="
-                      text-slate-500
-                      transition
-                      group-hover:text-cyan-400
-                    "
-                  />
-
-                  Templates
-                </button>
-              </div>
-
-              {/* ================================================= */}
-              {/* SUBMIT */}
-              {/* ================================================= */}
-
-              <div className="flex items-center justify-between gap-5 sm:justify-end">
-                <span className="text-xs text-slate-600 sm:text-sm">
                   Ctrl + Enter
                 </span>
 
                 <button
                   type="button"
-                  onClick={
-                    handleSubmit
-                  }
+                  onClick={() => {
+                    void handleSubmit();
+                  }}
                   disabled={
-                    loading
+                    !canSubmit
                   }
-                  className="
+                  aria-label="Start research"
+                  title="Start research"
+                  className={`
                     flex
-                    h-12
-                    min-w-[180px]
+                    h-9
+                    w-9
                     items-center
                     justify-center
-                    gap-2
-                    rounded-2xl
-                    bg-cyan-400
-                    px-6
-                    font-semibold
-                    text-black
-                    transition-all
-                    duration-300
-                    hover:scale-[1.02]
-                    hover:bg-cyan-300
-                    hover:shadow-[0_0_35px_rgba(34,211,238,0.18)]
+
+                    rounded-full
+
+                    border-0
+
+                    !outline-none
+
+                    transition-colors
+
+                    focus:!outline-none
+                    focus-visible:!outline-none
+                    focus-visible:!ring-0
+
+                    ${
+                      canSubmit
+                        ? "bg-white text-black hover:bg-white/85"
+                        : "bg-white/[0.08] text-white/20"
+                    }
+
                     disabled:cursor-not-allowed
-                    disabled:opacity-60
-                    disabled:hover:scale-100
-                  "
+                  `}
                 >
                   {loading ? (
-                    <>
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
-                      />
-
-                      Researching...
-                    </>
+                    <Loader2
+                      size={17}
+                      className="
+                        animate-spin
+                      "
+                    />
                   ) : (
-                    <>
-                      Deep Research
-
-                      <ArrowUp
-                        size={18}
-                      />
-                    </>
+                    <ArrowUp
+                      size={18}
+                      strokeWidth={2.4}
+                    />
                   )}
                 </button>
-              </div>
-            </div>
+              </>
+            )}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ======================================================== */}
-      {/* TEMPLATE PICKER */}
-      {/* ======================================================== */}
+      {/* ======================================================
+          STATUS TEXT
+      ====================================================== */}
+
+      {researchRunning && (
+        <div
+          className="
+            mt-2
+
+            flex
+            items-center
+            justify-between
+
+            px-1
+
+            text-[10px]
+            text-white/25
+          "
+        >
+          <span>
+            {job?.current_step
+              ? `Current stage: ${job.current_step}`
+              : "Research in progress"}
+          </span>
+
+          {typeof job?.progress ===
+            "number" && (
+            <span
+              className="
+                tabular-nums
+              "
+            >
+              {Math.round(
+                job.progress
+              )}
+              %
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* ======================================================
+          TEMPLATE PICKER
+      ====================================================== */}
 
       <TemplatePicker
         open={
           templatesOpen
         }
-        onClose={
-          closeTemplates
+        onClose={() =>
+          setTemplatesOpen(
+            false
+          )
         }
         onSelect={
           handleTemplateSelect

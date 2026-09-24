@@ -1,125 +1,917 @@
 @import "tailwindcss";
 
+/* ============================================================
+   DEEPRESEARCH DESIGN SYSTEM
+   VERSION: V3
+   ============================================================ */
+
 :root {
-  --background: #06070b;
-  --surface: #0f1117;
-  --surface-2: #151922;
+  /* ==========================================================
+     CANVAS + SURFACES
+     ========================================================== */
 
-  --border: #202735;
+  --dr-bg: #050505;
 
-  --primary: #22d3ee;
-  --secondary: #3b82f6;
+  --dr-sidebar: #0d0d0d;
 
-  --text: #f8fafc;
-  --muted: #94a3b8;
+  --dr-surface-1: #111111;
+  --dr-surface-2: #171717;
+  --dr-surface-3: #1d1d1d;
+  --dr-surface-4: #232323;
 
-  --success: #10b981;
-  --danger: #ef4444;
+  /* ==========================================================
+     TEXT
+     ========================================================== */
+
+  --dr-text-primary: rgba(255, 255, 255, 0.96);
+  --dr-text-secondary: rgba(255, 255, 255, 0.68);
+  --dr-text-tertiary: rgba(255, 255, 255, 0.44);
+  --dr-text-muted: rgba(255, 255, 255, 0.28);
+  --dr-text-disabled: rgba(255, 255, 255, 0.18);
+
+  /* ==========================================================
+     BORDERS
+     ========================================================== */
+
+  --dr-border-subtle: rgba(255, 255, 255, 0.06);
+  --dr-border: rgba(255, 255, 255, 0.09);
+  --dr-border-strong: rgba(255, 255, 255, 0.14);
+
+  /* ==========================================================
+     ACCENT
+     ========================================================== */
+
+  --dr-accent: #22d3ee;
+  --dr-accent-hover: #67e8f9;
+
+  --dr-accent-soft: rgba(34, 211, 238, 0.08);
+  --dr-accent-border: rgba(34, 211, 238, 0.2);
+
+  /* ==========================================================
+     SEMANTIC COLORS
+     ========================================================== */
+
+  --dr-success: #34d399;
+  --dr-success-soft: rgba(52, 211, 153, 0.08);
+
+  --dr-warning: #fbbf24;
+  --dr-warning-soft: rgba(251, 191, 36, 0.08);
+
+  --dr-danger: #f87171;
+  --dr-danger-soft: rgba(248, 113, 113, 0.08);
+
+  /* ==========================================================
+     SPACING
+     ========================================================== */
+
+  --dr-space-1: 4px;
+  --dr-space-2: 8px;
+  --dr-space-3: 12px;
+  --dr-space-4: 16px;
+  --dr-space-5: 20px;
+  --dr-space-6: 24px;
+  --dr-space-8: 32px;
+  --dr-space-10: 40px;
+  --dr-space-12: 48px;
+  --dr-space-16: 64px;
+
+  /* ==========================================================
+     RADII
+     ========================================================== */
+
+  --dr-radius-xs: 6px;
+  --dr-radius-sm: 8px;
+  --dr-radius-md: 12px;
+  --dr-radius-lg: 16px;
+  --dr-radius-xl: 24px;
+  --dr-radius-pill: 999px;
+
+  /* ==========================================================
+     SHADOWS
+     ========================================================== */
+
+  --dr-shadow-sm:
+    0 1px 2px rgba(0, 0, 0, 0.24);
+
+  --dr-shadow-md:
+    0 8px 30px rgba(0, 0, 0, 0.28);
+
+  --dr-shadow-lg:
+    0 18px 60px rgba(0, 0, 0, 0.42);
+
+  --dr-shadow-floating:
+    0 24px 80px rgba(0, 0, 0, 0.52);
+
+  /* ==========================================================
+     MOTION
+     ========================================================== */
+
+  --dr-duration-fast: 150ms;
+  --dr-duration-normal: 200ms;
+  --dr-duration-slow: 250ms;
+
+  --dr-ease-standard:
+    cubic-bezier(0.2, 0, 0, 1);
+
+  --dr-ease-emphasized:
+    cubic-bezier(0.2, 0, 0, 1.2);
+
+  /* ==========================================================
+     WIDTHS
+     ========================================================== */
+
+  --dr-content-sm: 720px;
+  --dr-content-md: 860px;
+  --dr-content-lg: 1000px;
+  --dr-content-xl: 1200px;
 }
+
+/* ============================================================
+   TAILWIND V4 THEME TOKENS
+   ============================================================ */
+
+@theme inline {
+  --color-background: var(--dr-bg);
+
+  --color-surface-1: var(--dr-surface-1);
+  --color-surface-2: var(--dr-surface-2);
+  --color-surface-3: var(--dr-surface-3);
+
+  --color-accent: var(--dr-accent);
+
+  --color-success: var(--dr-success);
+  --color-warning: var(--dr-warning);
+  --color-danger: var(--dr-danger);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* ============================================================
+   RESET
+   ============================================================ */
 
 *,
 *::before,
-*::after{
-  box-sizing:border-box;
+*::after {
+  box-sizing: border-box;
 }
-
-html{
-  scroll-behavior:smooth;
-}
-
-html,
-body{
-  margin:0;
-  padding:0;
-  min-height:100%;
-  background:var(--background);
-  color:var(--text);
-  font-family:Inter,Arial,sans-serif;
-  overflow-x:hidden;
-}
-
-body{
-
-  background:
-
-  radial-gradient(
-  circle at 15% 20%,
-  rgba(34,211,238,.08),
-  transparent 28%
-  ),
-
-  radial-gradient(
-  circle at 85% 15%,
-  rgba(59,130,246,.08),
-  transparent 30%
-  ),
-
-  linear-gradient(
-  180deg,
-  #06070b,
-  #090b11
-  );
-
-}
-
-a{
-  text-decoration:none;
-  color:inherit;
-}
-
-button{
-  font:inherit;
-}
-
-img{
-  display:block;
-  max-width:100%;
-}
-
-::selection{
-  background:#22d3ee55;
-}
-
-
-/* ============================================================
-   DEEPRESEARCH SCROLLBAR
-   ============================================================ */
 
 html {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(34, 211, 238, 0.18) transparent;
+  min-height: 100%;
+
+  background:
+    var(--dr-bg);
+
+  color-scheme: dark;
+
+  scroll-behavior: smooth;
+
+  text-rendering:
+    optimizeLegibility;
+
+  -webkit-font-smoothing:
+    antialiased;
+
+  -moz-osx-font-smoothing:
+    grayscale;
 }
 
 body {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(34, 211, 238, 0.18) transparent;
+  margin: 0;
+  padding: 0;
+
+  min-height: 100vh;
+
+  background:
+    var(--dr-bg);
+
+  color:
+    var(--dr-text-primary);
+
+  font-family:
+    var(--font-geist-sans),
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  font-size: 15px;
+
+  line-height: 1.5;
+
+  overflow-x: hidden;
 }
 
-/* Chrome / Edge / Safari */
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--dr-text-primary);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+p {
+  color: var(--dr-text-secondary);
+}
+
+strong {
+  color: var(--dr-text-primary);
+  font-weight: 600;
+}
+
+small {
+  color: var(--dr-text-tertiary);
+}
+
+/* ============================================================
+   LINKS
+   ============================================================ */
+
+a {
+  color: inherit;
+
+  text-decoration: none;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   FORMS
+   ============================================================ */
+
+input,
+textarea,
+select {
+  color:
+    var(--dr-text-primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color:
+    var(--dr-text-muted);
+}
+
+textarea {
+  font-family: inherit;
+}
+
+/* ============================================================
+   IMAGES
+   ============================================================ */
+
+img,
+svg {
+  display: block;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ============================================================
+   SELECTION
+   ============================================================ */
+
+::selection {
+  background:
+    rgba(
+      34,
+      211,
+      238,
+      0.22
+    );
+
+  color: white;
+}
+
+/* ============================================================
+   ACCESSIBLE FOCUS
+   ============================================================ */
+
+:focus-visible {
+  outline:
+    2px solid
+    rgba(
+      34,
+      211,
+      238,
+      0.72
+    );
+
+  outline-offset:
+    2px;
+}
+
+/* ============================================================
+   DESIGN SYSTEM PRIMITIVES
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   SURFACES
+   ------------------------------------------------------------ */
+
+.dr-surface {
+  background:
+    var(--dr-surface-2);
+
+  border:
+    1px solid
+    var(--dr-border);
+}
+
+.dr-surface-elevated {
+  background:
+    var(--dr-surface-3);
+
+  border:
+    1px solid
+    var(--dr-border);
+
+  box-shadow:
+    var(--dr-shadow-md);
+}
+
+/* ------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------ */
+
+.dr-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    var(--dr-space-2);
+
+  min-height:
+    40px;
+
+  padding:
+    0
+    var(--dr-space-4);
+
+  border:
+    1px solid
+    transparent;
+
+  border-radius:
+    var(--dr-radius-md);
+
+  font-size:
+    0.875rem;
+
+  font-weight:
+    500;
+
+  transition:
+    background-color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard),
+    border-color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard),
+    color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard),
+    opacity
+      var(--dr-duration-fast)
+      var(--dr-ease-standard);
+}
+
+.dr-button:disabled {
+  opacity: 0.45;
+}
+
+/* PRIMARY */
+
+.dr-button-primary {
+  background: white;
+
+  color: black;
+}
+
+.dr-button-primary:hover:not(:disabled) {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.88
+    );
+}
+
+/* SECONDARY */
+
+.dr-button-secondary {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.035
+    );
+
+  border-color:
+    var(--dr-border);
+
+  color:
+    var(--dr-text-secondary);
+}
+
+.dr-button-secondary:hover:not(:disabled) {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.065
+    );
+
+  border-color:
+    var(--dr-border-strong);
+
+  color:
+    var(--dr-text-primary);
+}
+
+/* GHOST */
+
+.dr-button-ghost {
+  background:
+    transparent;
+
+  color:
+    var(--dr-text-tertiary);
+}
+
+.dr-button-ghost:hover:not(:disabled) {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.05
+    );
+
+  color:
+    var(--dr-text-primary);
+}
+
+/* DANGER */
+
+.dr-button-danger {
+  background:
+    transparent;
+
+  color:
+    var(--dr-text-tertiary);
+}
+
+.dr-button-danger:hover:not(:disabled) {
+  background:
+    var(--dr-danger-soft);
+
+  color:
+    var(--dr-danger);
+}
+
+/* ------------------------------------------------------------
+   ICON BUTTON
+   ------------------------------------------------------------ */
+
+.dr-icon-button {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    40px;
+
+  height:
+    40px;
+
+  border:
+    0;
+
+  border-radius:
+    var(--dr-radius-md);
+
+  background:
+    transparent;
+
+  color:
+    var(--dr-text-tertiary);
+
+  transition:
+    background-color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard),
+    color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard);
+}
+
+.dr-icon-button:hover:not(:disabled) {
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.055
+    );
+
+  color:
+    var(--dr-text-primary);
+}
+
+/* ------------------------------------------------------------
+   INPUTS
+   ------------------------------------------------------------ */
+
+.dr-input {
+  width: 100%;
+
+  min-height:
+    42px;
+
+  border:
+    1px solid
+    var(--dr-border);
+
+  border-radius:
+    var(--dr-radius-md);
+
+  background:
+    var(--dr-surface-2);
+
+  padding:
+    0
+    var(--dr-space-3);
+
+  color:
+    var(--dr-text-primary);
+
+  outline:
+    none;
+
+  transition:
+    border-color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard),
+    background-color
+      var(--dr-duration-fast)
+      var(--dr-ease-standard);
+}
+
+.dr-input:hover {
+  border-color:
+    var(--dr-border-strong);
+}
+
+.dr-input:focus {
+  border-color:
+    rgba(
+      255,
+      255,
+      255,
+      0.18
+    );
+}
+
+/* ------------------------------------------------------------
+   CARD
+   ------------------------------------------------------------ */
+
+.dr-card {
+  border:
+    1px solid
+    var(--dr-border-subtle);
+
+  border-radius:
+    var(--dr-radius-lg);
+
+  background:
+    var(--dr-surface-2);
+
+  padding:
+    var(--dr-space-6);
+}
+
+/* ------------------------------------------------------------
+   DIALOG / FLOATING SURFACE
+   ------------------------------------------------------------ */
+
+.dr-dialog {
+  border:
+    1px solid
+    var(--dr-border);
+
+  border-radius:
+    var(--dr-radius-lg);
+
+  background:
+    var(--dr-surface-3);
+
+  box-shadow:
+    var(--dr-shadow-floating);
+}
+
+/* ------------------------------------------------------------
+   BADGE
+   ------------------------------------------------------------ */
+
+.dr-badge {
+  display:
+    inline-flex;
+
+  align-items:
+    center;
+
+  gap:
+    6px;
+
+  min-height:
+    24px;
+
+  padding:
+    0 9px;
+
+  border-radius:
+    var(--dr-radius-pill);
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  color:
+    var(--dr-text-tertiary);
+
+  font-size:
+    0.75rem;
+
+  font-weight:
+    500;
+}
+
+/* ------------------------------------------------------------
+   ACCENT
+   ------------------------------------------------------------ */
+
+.dr-accent {
+  color:
+    var(--dr-accent);
+}
+
+.dr-accent-surface {
+  background:
+    var(--dr-accent-soft);
+
+  border-color:
+    var(--dr-accent-border);
+}
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+@keyframes dr-spin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+@keyframes dr-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.dr-spinner {
+  width:
+    16px;
+
+  height:
+    16px;
+
+  border:
+    2px solid
+    rgba(
+      255,
+      255,
+      255,
+      0.18
+    );
+
+  border-top-color:
+    currentColor;
+
+  border-radius:
+    50%;
+
+  animation:
+    dr-spin
+    700ms
+    linear
+    infinite;
+}
+
+.dr-skeleton {
+  border-radius:
+    var(--dr-radius-sm);
+
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.045
+    );
+
+  animation:
+    dr-pulse
+    1.4s
+    ease-in-out
+    infinite;
+}
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+
+html,
+body,
+* {
+  scrollbar-width:
+    thin;
+
+  scrollbar-color:
+    rgba(
+      255,
+      255,
+      255,
+      0.12
+    )
+    transparent;
+}
 
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width:
+    7px;
+
+  height:
+    7px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background:
+    transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background 200ms ease;
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.1
+    );
+
+  border:
+    2px solid
+    transparent;
+
+  border-radius:
+    var(--dr-radius-pill);
+
+  background-clip:
+    padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(34, 211, 238, 0.28);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background:
+    rgba(
+      255,
+      255,
+      255,
+      0.18
+    );
+
+  border:
+    2px solid
+    transparent;
+
+  background-clip:
+    padding-box;
 }
 
 ::-webkit-scrollbar-corner {
-  background: transparent;
+  background:
+    transparent;
+}
+
+/* ============================================================
+   MOTION ACCESSIBILITY
+   ============================================================ */
+
+@media (
+  prefers-reduced-motion:
+  reduce
+) {
+  html {
+    scroll-behavior:
+      auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+
+    transition-duration:
+      0.01ms !important;
+
+    scroll-behavior:
+      auto !important;
+  }
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (
+  max-width: 640px
+) {
+  body {
+    font-size:
+      14px;
+  }
+
+  .dr-card {
+    padding:
+      var(--dr-space-4);
+  }
 }

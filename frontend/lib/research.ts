@@ -4,18 +4,19 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://127.0.0.1:8000/api/v1";
 
-
 // ============================================================
-// AUTHENTICATED REQUEST HEADERS
+// AUTH HEADERS
 // ============================================================
 
 async function getAuthHeaders(): Promise<HeadersInit> {
-  const supabase = createClient();
+  const supabase =
+    createClient();
 
   const {
     data,
     error,
-  } = await supabase.auth.getSession();
+  } =
+    await supabase.auth.getSession();
 
   if (error) {
     console.error(
@@ -39,16 +40,14 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   };
 }
 
-
 // ============================================================
-// CREATE NEW RESEARCH CONVERSATION
+// CREATE RESEARCH
 // ============================================================
 
 export async function createResearch(
   query: string,
   pdfFile?: File | null
 ) {
-
   const formData =
     new FormData();
 
@@ -58,7 +57,6 @@ export async function createResearch(
   );
 
   if (pdfFile) {
-
     formData.append(
       "pdf",
       pdfFile
@@ -81,7 +79,6 @@ export async function createResearch(
     );
 
   if (!response.ok) {
-
     const text =
       await response.text();
 
@@ -93,16 +90,14 @@ export async function createResearch(
   return response.json();
 }
 
-
 // ============================================================
-// SEND FOLLOW-UP QUESTION
+// FOLLOW-UP QUESTION
 // ============================================================
 
 export async function sendResearchQuestion(
   chatId: string,
   query: string
 ) {
-
   const headers =
     await getAuthHeaders();
 
@@ -128,7 +123,6 @@ export async function sendResearchQuestion(
     );
 
   if (!response.ok) {
-
     const text =
       await response.text();
 
@@ -140,15 +134,49 @@ export async function sendResearchQuestion(
   return response.json();
 }
 
+// ============================================================
+// CANCEL RESEARCH
+// ============================================================
+
+export async function cancelResearch(
+  jobId: string
+) {
+  const headers =
+    await getAuthHeaders();
+
+  const response =
+    await fetch(
+      `${API_BASE}/research/${encodeURIComponent(
+        jobId
+      )}/cancel`,
+      {
+        method: "POST",
+
+        headers,
+
+        cache: "no-store",
+      }
+    );
+
+  if (!response.ok) {
+    const text =
+      await response.text();
+
+    throw new Error(
+      `Failed to cancel research: ${response.status} ${text}`
+    );
+  }
+
+  return response.json();
+}
 
 // ============================================================
-// GET RESEARCH JOB
+// GET RESEARCH
 // ============================================================
 
 export async function getResearch(
   jobId: string
 ) {
-
   const headers =
     await getAuthHeaders();
 
@@ -167,7 +195,6 @@ export async function getResearch(
     );
 
   if (!response.ok) {
-
     const text =
       await response.text();
 
@@ -179,13 +206,11 @@ export async function getResearch(
   return response.json();
 }
 
-
 // ============================================================
-// GET RESEARCH HISTORY
+// HISTORY
 // ============================================================
 
 export async function getResearchHistory() {
-
   const headers =
     await getAuthHeaders();
 
@@ -202,7 +227,6 @@ export async function getResearchHistory() {
     );
 
   if (!response.ok) {
-
     const text =
       await response.text();
 

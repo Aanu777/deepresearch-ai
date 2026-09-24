@@ -1,20 +1,28 @@
 "use client";
 
 import {
-  BrainCircuit,
-  UserCircle2,
-} from "lucide-react";
-
-import {
   useEffect,
   useState,
 } from "react";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  CircleUserRound,
+} from "lucide-react";
+
+import {
+  createClient,
+} from "@/lib/supabase/client";
+
+import {
+  Badge,
+  IconButton,
+} from "@/components/ui";
 
 export default function WorkspaceHeader() {
-  const [userName, setUserName] =
-    useState("User");
+  const [
+    userName,
+    setUserName,
+  ] = useState("User");
 
   useEffect(() => {
     let mounted = true;
@@ -25,26 +33,36 @@ export default function WorkspaceHeader() {
           createClient();
 
         const {
-          data: { user },
+          data: {
+            user,
+          },
         } =
           await supabase.auth.getUser();
 
-        if (!mounted || !user) {
+        if (
+          !mounted ||
+          !user
+        ) {
           return;
         }
 
         const metadata =
-          user.user_metadata ?? {};
+          user.user_metadata ??
+          {};
 
         const name =
           metadata.username ||
           metadata.full_name ||
           metadata.name ||
           metadata.user_name ||
-          user.email?.split("@")[0] ||
+          user.email?.split(
+            "@"
+          )[0] ||
           "User";
 
-        setUserName(name);
+        setUserName(
+          name
+        );
       } catch (error) {
         console.error(
           "Failed to load current user:",
@@ -61,64 +79,82 @@ export default function WorkspaceHeader() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-[#05070B]/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6">
+    <header
+      className="
+        sticky
+        top-0
+        z-40
+        border-b
+        border-white/[0.06]
+        bg-[var(--dr-bg)]/90
+        backdrop-blur-xl
+      "
+    >
+      <div
+        className="
+          mx-auto
+          flex
+          h-14
+          w-full
+          max-w-[1200px]
+          items-center
+          justify-between
+          px-4
+          sm:px-6
+        "
+      >
+        {/* PRODUCT */}
 
-        {/* Logo */}
+        <div className="flex items-center gap-2.5">
+          <span className="h-2 w-2 rounded-full bg-cyan-400" />
 
-        <div className="flex items-center gap-4">
+          <span
+            className="
+              text-sm
+              font-semibold
+              tracking-tight
+              text-white/90
+            "
+          >
+            DeepResearch
+          </span>
 
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10">
-
-            <BrainCircuit
-              size={24}
-              className="text-cyan-400"
-            />
-
-          </div>
-
-          <div>
-
-            <h1 className="text-lg font-semibold">
-              DeepResearch
-            </h1>
-
-            <p className="text-sm text-slate-400">
-              Autonomous Research Workspace
-            </p>
-
-          </div>
-
+          <Badge
+            variant="accent"
+            className="hidden sm:inline-flex"
+          >
+            Research
+          </Badge>
         </div>
 
-        {/* Right */}
+        {/* ACCOUNT */}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className="
+              hidden
+              max-w-[140px]
+              truncate
+              text-xs
+              text-white/35
+              sm:block
+            "
+          >
+            {userName}
+          </span>
 
-
-          <button className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0B1118] px-3 py-2 transition hover:border-cyan-400/30">
-
-            <UserCircle2
-              size={34}
-              className="text-cyan-400"
+          <IconButton
+            type="button"
+            size="sm"
+            aria-label="Account"
+            title={userName}
+            className="rounded-full"
+          >
+            <CircleUserRound
+              size={19}
             />
-
-            <div className="text-left">
-
-              <p className="text-sm font-medium">
-                {userName}
-              </p>
-
-              <p className="text-xs text-slate-400">
-                Researcher
-              </p>
-
-            </div>
-
-          </button>
-
+          </IconButton>
         </div>
-
       </div>
     </header>
   );

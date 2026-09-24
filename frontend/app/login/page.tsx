@@ -8,12 +8,22 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import {
+  Eye,
+  EyeOff,
+} from "lucide-react";
+
 import AuthShell from "@/components/auth/AuthShell";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Button,
+  IconButton,
+  Input,
+  Spinner,
+} from "@/components/ui";
 
 export default function LoginPage() {
   const router = useRouter();
-
   const supabase = createClient();
 
   const [email, setEmail] =
@@ -22,8 +32,10 @@ export default function LoginPage() {
   const [password, setPassword] =
     useState("");
 
-  const [showPassword, setShowPassword] =
-    useState(false);
+  const [
+    showPassword,
+    setShowPassword,
+  ] = useState(false);
 
   const [loading, setLoading] =
     useState(false);
@@ -35,6 +47,10 @@ export default function LoginPage() {
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
+
+    if (loading) {
+      return;
+    }
 
     setError("");
     setLoading(true);
@@ -68,6 +84,10 @@ export default function LoginPage() {
   }
 
   async function handleGoogleLogin() {
+    if (loading) {
+      return;
+    }
+
     setError("");
     setLoading(true);
 
@@ -79,8 +99,7 @@ export default function LoginPage() {
           {
             provider: "google",
             options: {
-              redirectTo:
-                `${window.location.origin}/auth/callback`,
+              redirectTo: `${window.location.origin}/auth/callback`,
             },
           }
         );
@@ -104,171 +123,188 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Sign in to continue your research."
     >
-      <button
-        type="button"
-        onClick={handleGoogleLogin}
-        disabled={loading}
-        className="
-          flex h-11 w-full items-center
-          justify-center gap-3 rounded-xl
-          border border-white/[0.09]
-          bg-white/[0.035]
-          text-sm font-medium
-          text-slate-200
-          transition
-          hover:bg-white/[0.07]
-          disabled:cursor-not-allowed
-          disabled:opacity-50
-        "
-      >
-        <span className="text-sm font-bold">
-          G
-        </span>
-
-        Continue with Google
-      </button>
-
-      <div className="my-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/[0.07]" />
-
-        <span className="text-[11px] uppercase tracking-wider text-slate-600">
-          or
-        </span>
-
-        <div className="h-px flex-1 bg-white/[0.07]" />
-      </div>
-
-      <form
-        onSubmit={handleLogin}
-        className="space-y-4"
-      >
-        <div>
-          <label className="mb-2 block text-xs font-medium text-slate-400">
-            Email
-          </label>
-
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            placeholder="you@example.com"
+      <div className="space-y-5">
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          fullWidth
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="h-11 text-white"
+        >
+          <span
             className="
-              h-11 w-full rounded-xl
-              border border-white/[0.08]
-              bg-white/[0.025]
-              px-3.5 text-sm text-white
-              outline-none
-              transition
-              placeholder:text-slate-700
-              focus:border-cyan-400/40
-              focus:bg-white/[0.04]
+              flex
+              h-5
+              w-5
+              items-center
+              justify-center
+              rounded-full
+              bg-white
+              text-[11px]
+              font-bold
+              text-black
             "
-          />
+          >
+            G
+          </span>
+
+          Continue with Google
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/[0.06]" />
+
+          <span
+            className="
+              text-[10px]
+              font-medium
+              uppercase
+              tracking-[0.14em]
+              text-white/20
+            "
+          >
+            or
+          </span>
+
+          <div className="h-px flex-1 bg-white/[0.06]" />
         </div>
 
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <label className="text-xs font-medium text-slate-400">
-              Password
+        <form
+          onSubmit={handleLogin}
+          className="space-y-3.5"
+        >
+          <div>
+            <label
+              htmlFor="login-email"
+              className="mb-1.5 block text-xs font-medium text-white/45"
+            >
+              Email
             </label>
 
-            <Link
-              href="/forgot-password"
-              className="text-xs text-cyan-400 hover:text-cyan-300"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          <div className="relative">
-            <input
-              type={
-                showPassword
-                  ? "text"
-                  : "password"
-              }
+            <Input
+              id="login-email"
+              type="email"
               required
-              autoComplete="current-password"
-              value={password}
+              autoComplete="email"
+              value={email}
               onChange={(event) =>
-                setPassword(
+                setEmail(
                   event.target.value
                 )
               }
-              placeholder="Your password"
-              className="
-                h-11 w-full rounded-xl
-                border border-white/[0.08]
-                bg-white/[0.025]
-                px-3.5 pr-20
-                text-sm text-white
-                outline-none
-                transition
-                placeholder:text-slate-700
-                focus:border-cyan-400/40
-                focus:bg-white/[0.04]
-              "
+              placeholder="you@example.com"
+              disabled={loading}
+              className="h-11"
             />
+          </div>
 
-            <button
-              type="button"
-              onClick={() =>
-                setShowPassword(
-                  (value) => !value
-                )
-              }
-              className="
-                absolute right-3
-                top-1/2 -translate-y-1/2
-                text-xs text-slate-500
-                hover:text-slate-200
-              "
+          <div>
+            <div className="mb-1.5 flex items-center justify-between gap-3">
+              <label
+                htmlFor="login-password"
+                className="text-xs font-medium text-white/45"
+              >
+                Password
+              </label>
+
+              <Link
+                href="/forgot-password"
+                className="text-xs text-white/35 transition-colors duration-150 hover:text-cyan-300"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
+            <div className="relative">
+              <Input
+                id="login-password"
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
+                required
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) =>
+                  setPassword(
+                    event.target.value
+                  )
+                }
+                placeholder="Your password"
+                disabled={loading}
+                className="h-11 pr-12"
+              />
+
+              <IconButton
+                type="button"
+                size="sm"
+                onClick={() =>
+                  setShowPassword(
+                    (value) => !value
+                  )
+                }
+                aria-label={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+                title={
+                  showPassword
+                    ? "Hide password"
+                    : "Show password"
+                }
+                className="absolute right-1.5 top-1/2 h-8 w-8 -translate-y-1/2"
+              >
+                {showPassword ? (
+                  <EyeOff size={15} />
+                ) : (
+                  <Eye size={15} />
+                )}
+              </IconButton>
+            </div>
+          </div>
+
+          {error && (
+            <div
+              role="alert"
+              className="rounded-xl border border-red-400/[0.12] bg-red-400/[0.06] px-3 py-2.5 text-xs leading-5 text-red-300"
             >
-              {showPassword
-                ? "Hide"
-                : "Show"}
-            </button>
-          </div>
-        </div>
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="rounded-xl border border-red-400/10 bg-red-400/[0.06] px-3 py-2.5 text-xs leading-5 text-red-300">
-            {error}
-          </div>
-        )}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={loading}
+            className="mt-1 h-11 font-semibold text-slate-950"
+          >
+            {loading ? (
+              <>
+                <Spinner size={15} />
+                Signing in...
+              </>
+            ) : (
+              "Continue"
+            )}
+          </Button>
+        </form>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="
-            h-11 w-full rounded-xl
-            bg-white text-sm font-semibold
-            text-black
-            transition
-            hover:bg-slate-200
-            disabled:cursor-not-allowed
-            disabled:opacity-50
-          "
-        >
-          {loading
-            ? "Signing in..."
-            : "Continue"}
-        </button>
-      </form>
-
-      <p className="mt-6 text-center text-sm text-slate-500">
-        Don't have an account?{" "}
-        <Link
-          href="/signup"
-          className="font-medium text-white hover:text-cyan-300"
-        >
-          Sign up
-        </Link>
-      </p>
+        <p className="text-center text-sm text-white/30">
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            className="font-medium text-white/75 transition-colors duration-150 hover:text-cyan-300"
+          >
+            Sign up
+          </Link>
+        </p>
+      </div>
     </AuthShell>
   );
 }

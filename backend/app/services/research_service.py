@@ -1,3 +1,4 @@
+import threading
 import time
 import traceback
 import uuid
@@ -14,6 +15,29 @@ from app.state.job_state_manager import JobStateManager
 
 class ResearchService:
 
+    def __init__(self):
+        # ========================================================
+        # RUN VERSION TRACKING
+        #
+        # Each research execution receives a version number.
+        #
+        # This allows us to:
+        # - cancel an active run
+        # - prevent an older run from overwriting a newer run
+        # - safely continue the same research conversation later
+        # ========================================================
+
+        self._run_lock = threading.Lock()
+
+        self._run_versions: dict[
+            str,
+            int,
+        ] = {}
+
+        self._cancelled_runs: set[
+            tuple[str, int]
+        ] = set()
+
     # ============================================================
     # CREATE NEW RESEARCH CONVERSATION
     # ============================================================
@@ -25,21 +49,12 @@ class ResearchService:
         pdf_filename: str | None = None,
         pdf_text: str | None = None,
     ):
-
         query = query.strip()
 
         job = ResearchJob(
             job_id=str(uuid.uuid4()),
 
-            # ----------------------------------------------------
-            # OWNER
-            # ----------------------------------------------------
-
             user_id=user_id,
-
-            # ----------------------------------------------------
-            # QUERY
-            # ----------------------------------------------------
 
             query=query,
 
@@ -50,17 +65,9 @@ class ResearchService:
                 )
             ],
 
-            # ----------------------------------------------------
-            # PDF
-            # ----------------------------------------------------
-
             pdf_filename=pdf_filename,
 
             pdf_text=pdf_text or "",
-
-            # ----------------------------------------------------
-            # TIMESTAMP
-            # ----------------------------------------------------
 
             created_at=datetime.utcnow(),
         )
@@ -77,11 +84,12 @@ class ResearchService:
         self,
         job_id: str,
     ):
-
-        return job_store.get(job_id)
+        return job_store.get(
+            job_id
+        )
 
     # ============================================================
-    # GET USER'S JOB
+    # GET USER JOB
     # ============================================================
 
     def get_user_job(
@@ -89,17 +97,12 @@ class ResearchService:
         job_id: str,
         user_id: str,
     ) -> ResearchJob | None:
-
-        job = job_store.get(job_id)
+        job = job_store.get(
+            job_id
+        )
 
         if job is None:
             return None
-
-        # --------------------------------------------------------
-        # SECURITY:
-        #
-        # A user can only access their own research conversation.
-        # --------------------------------------------------------
 
         if job.user_id != user_id:
             return None
@@ -107,30 +110,18 @@ class ResearchService:
         return job
 
     # ============================================================
-    # LIST USER'S JOBS
+    # LIST USER JOBS
     # ============================================================
 
     def list_jobs(
         self,
         user_id: str,
     ) -> list[ResearchJob]:
-
-        # --------------------------------------------------------
-        # SECURITY:
-        #
-        # Never return every user's jobs.
-        # Only return jobs owned by the authenticated user.
-        # --------------------------------------------------------
-
         jobs = [
             job
             for job in job_store.all()
             if job.user_id == user_id
         ]
-
-        # --------------------------------------------------------
-        # Newest conversations first.
-        # --------------------------------------------------------
 
         jobs.sort(
             key=lambda job: job.created_at,
@@ -140,17 +131,13 @@ class ResearchService:
         return jobs
 
     # ============================================================
-    # LIST USER'S JOBS
-    #
-    # Alias kept for compatibility with any code that already
-    # calls list_user_jobs().
+    # LIST USER JOBS ALIAS
     # ============================================================
 
     def list_user_jobs(
         self,
         user_id: str,
     ) -> list[ResearchJob]:
-
         return self.list_jobs(
             user_id
         )
@@ -164,8 +151,9 @@ class ResearchService:
         job_id: str,
         query: str,
     ):
-
-        job = job_store.get(job_id)
+        job = job_store.get(
+            job_id
+        )
 
         if job is None:
             return None
@@ -174,10 +162,6 @@ class ResearchService:
 
         if not query:
             return job
-
-        # --------------------------------------------------------
-        # Add question to conversation history.
-        # --------------------------------------------------------
 
         next_id = (
             max(
@@ -197,24 +181,10 @@ class ResearchService:
             )
         )
 
-        # --------------------------------------------------------
-        # Latest question becomes active research query.
-        # --------------------------------------------------------
-
         job.query = query
 
         # --------------------------------------------------------
-        # Reset current research output.
-        #
-        # IMPORTANT:
-        #
-        # The job ID remains unchanged.
-        #
-        # Therefore:
-        #
-        # One research conversation
-        #     ↓
-        # Multiple questions
+        # Reset research output while keeping the SAME job ID.
         # --------------------------------------------------------
 
         job.status = "queued"
@@ -249,14 +219,14 @@ class ResearchService:
 
         job.metrics.evidence_items = 0
 
-        job_store.update(job)
+        job_store.update(
+            job
+        )
 
         return job
 
     # ============================================================
     # ADD FOLLOW-UP QUESTION FOR USER
-    #
-    # Security-aware version.
     # ============================================================
 
     def add_user_question(
@@ -265,7 +235,6 @@ class ResearchService:
         user_id: str,
         query: str,
     ):
-
         job = self.get_user_job(
             job_id,
             user_id,
@@ -280,6 +249,178 @@ class ResearchService:
         )
 
     # ============================================================
+    # RUN VERSION
+    # ============================================================
+
+    def _begin_run(
+        self,
+        job_id: str,
+    ) -> int:
+        with self._run_lock:
+            current = (
+                self._run_versions.get(
+                    job_id,
+                    0,
+                )
+            )
+
+            version = (
+                current + 1
+            )
+
+            self._run_versions[
+                job_id
+            ] = version
+
+            return version
+
+    # ============================================================
+    # CURRENT RUN CHECK
+    # ============================================================
+
+    def _is_current_run(
+        self,
+        job_id: str,
+        run_version: int,
+    ) -> bool:
+        with self._run_lock:
+            return (
+                self._run_versions.get(
+                    job_id
+                )
+                == run_version
+            )
+
+    # ============================================================
+    # CANCEL CHECK
+    # ============================================================
+
+    def _is_cancelled(
+        self,
+        job_id: str,
+        run_version: int,
+    ) -> bool:
+        with self._run_lock:
+            return (
+                (
+                    job_id,
+                    run_version,
+                )
+                in self._cancelled_runs
+            )
+
+    # ============================================================
+    # SHOULD STOP
+    # ============================================================
+
+    def _should_stop(
+        self,
+        job_id: str,
+        run_version: int,
+    ) -> bool:
+        if not self._is_current_run(
+            job_id,
+            run_version,
+        ):
+            return True
+
+        return self._is_cancelled(
+            job_id,
+            run_version,
+        )
+
+    # ============================================================
+    # MARK CANCELLED
+    # ============================================================
+
+    def _mark_cancelled(
+        self,
+        job: ResearchJob,
+    ):
+        job.status = "cancelled"
+
+        job.current_step = (
+            "Cancelled"
+        )
+
+        job.error = ""
+
+        JobStateManager.add_timeline(
+            job,
+            "Cancelled",
+            "Research was cancelled.",
+            True,
+        )
+
+        JobStateManager.add_thinking(
+            job,
+            "Research stopped by the user.",
+        )
+
+        job_store.update(
+            job
+        )
+
+    # ============================================================
+    # CANCEL RESEARCH
+    # ============================================================
+
+    def cancel_job(
+        self,
+        job_id: str,
+        user_id: str,
+    ) -> ResearchJob | None:
+        job = self.get_user_job(
+            job_id,
+            user_id,
+        )
+
+        if job is None:
+            return None
+
+        # --------------------------------------------------------
+        # Already terminal.
+        # --------------------------------------------------------
+
+        if job.status in {
+            "completed",
+            "failed",
+            "cancelled",
+        }:
+            return job
+
+        with self._run_lock:
+            current_version = (
+                self._run_versions.get(
+                    job_id
+                )
+            )
+
+            if (
+                current_version
+                is not None
+            ):
+                self._cancelled_runs.add(
+                    (
+                        job_id,
+                        current_version,
+                    )
+                )
+
+        # --------------------------------------------------------
+        # Mark immediately so the UI responds instantly.
+        #
+        # If the background function has not begun yet,
+        # run_research() will see this status and exit.
+        # --------------------------------------------------------
+
+        self._mark_cancelled(
+            job
+        )
+
+        return job
+
+    # ============================================================
     # RUN RESEARCH
     # ============================================================
 
@@ -288,16 +429,28 @@ class ResearchService:
         job_id: str,
         query: str,
     ):
-
-        job = job_store.get(job_id)
+        job = job_store.get(
+            job_id
+        )
 
         if job is None:
             return
 
+        # --------------------------------------------------------
+        # Handles cancellation before the BackgroundTask had
+        # a chance to begin.
+        # --------------------------------------------------------
+
+        if job.status == "cancelled":
+            return
+
+        run_version = self._begin_run(
+            job_id
+        )
+
         start_time = time.time()
 
         try:
-
             # ====================================================
             # INITIAL STATUS
             # ====================================================
@@ -316,7 +469,27 @@ class ResearchService:
                 True,
             )
 
-            job_store.update(job)
+            job_store.update(
+                job
+            )
+
+            # ====================================================
+            # CANCELLATION CHECK
+            # ====================================================
+
+            if self._should_stop(
+                job_id,
+                run_version,
+            ):
+                if self._is_cancelled(
+                    job_id,
+                    run_version,
+                ):
+                    self._mark_cancelled(
+                        job
+                    )
+
+                return
 
             # ====================================================
             # BUILD CONVERSATION CONTEXT
@@ -325,7 +498,6 @@ class ResearchService:
             conversation_context = ""
 
             if job.questions:
-
                 conversation_context = (
                     "\n\n".join(
                         [
@@ -346,42 +518,20 @@ class ResearchService:
             state = {
                 "job_id": job_id,
 
-                # ------------------------------------------------
-                # USER
-                # ------------------------------------------------
-
                 "user_id": job.user_id,
 
-                # ------------------------------------------------
-                # LATEST QUESTION
-                # ------------------------------------------------
-
                 "query": query,
-
-                # ------------------------------------------------
-                # FULL CONVERSATION CONTEXT
-                # ------------------------------------------------
 
                 "conversation_history":
                     conversation_context,
 
-                # ------------------------------------------------
-                # RESEARCH MODE
-                # ------------------------------------------------
-
                 "research_mode": "web",
 
-                # ------------------------------------------------
-                # PDF
-                # ------------------------------------------------
+                "pdf_filename":
+                    job.pdf_filename,
 
-                "pdf_filename": job.pdf_filename,
-
-                "pdf_text": job.pdf_text or "",
-
-                # ------------------------------------------------
-                # RESEARCH PIPELINE
-                # ------------------------------------------------
+                "pdf_text":
+                    job.pdf_text or "",
 
                 "plan": [],
 
@@ -395,17 +545,10 @@ class ResearchService:
 
                 "report": "",
 
-                # ------------------------------------------------
-                # WORKFLOW
-                # ------------------------------------------------
-
-                "current_step": "Planning",
+                "current_step":
+                    "Planning",
 
                 "completed": False,
-
-                # ------------------------------------------------
-                # REFLECTION
-                # ------------------------------------------------
 
                 "reflection_count": 0,
 
@@ -419,10 +562,6 @@ class ResearchService:
 
                 "next_research_questions": [],
 
-                # ------------------------------------------------
-                # LIVE UI
-                # ------------------------------------------------
-
                 "timeline": [],
 
                 "thinking": [],
@@ -431,15 +570,14 @@ class ResearchService:
 
                 "sources": [],
 
-                # ------------------------------------------------
-                # RUNTIME
-                # ------------------------------------------------
-
-                "started_at": start_time,
+                "started_at":
+                    start_time,
             }
 
             # ====================================================
             # PROGRESS MAP
+            #
+            # Existing graph stages are preserved.
             # ====================================================
 
             progress = {
@@ -468,7 +606,30 @@ class ResearchService:
             # RUN LANGGRAPH
             # ====================================================
 
-            for event in graph.stream(state):
+            for event in graph.stream(
+                state
+            ):
+                # ------------------------------------------------
+                # Cooperative cancellation.
+                #
+                # We cannot safely interrupt Python in the middle
+                # of an executing graph node, so cancellation is
+                # applied as soon as that node returns.
+                # ------------------------------------------------
+
+                if self._should_stop(
+                    job_id,
+                    run_version,
+                ):
+                    if self._is_cancelled(
+                        job_id,
+                        run_version,
+                    ):
+                        self._mark_cancelled(
+                            job
+                        )
+
+                    return
 
                 if not event:
                     continue
@@ -487,13 +648,11 @@ class ResearchService:
                 ):
                     continue
 
-                # =================================================
-                # AGENT TITLE
-                # =================================================
-
-                agent_title = node_titles.get(
-                    node_name,
-                    node_name.capitalize(),
+                agent_title = (
+                    node_titles.get(
+                        node_name,
+                        node_name.capitalize(),
+                    )
                 )
 
                 # =================================================
@@ -539,12 +698,13 @@ class ResearchService:
                 # SUMMARY
                 # =================================================
 
-                summary = current_state.get(
-                    "summary"
+                summary = (
+                    current_state.get(
+                        "summary"
+                    )
                 )
 
                 if summary:
-
                     JobStateManager.set_summary(
                         job,
                         summary,
@@ -554,12 +714,13 @@ class ResearchService:
                 # REPORT
                 # =================================================
 
-                report = current_state.get(
-                    "report"
+                report = (
+                    current_state.get(
+                        "report"
+                    )
                 )
 
                 if report:
-
                     JobStateManager.set_report(
                         job,
                         report,
@@ -569,12 +730,16 @@ class ResearchService:
                 # CONFIDENCE
                 # =================================================
 
-                quality_score = current_state.get(
-                    "quality_score"
+                quality_score = (
+                    current_state.get(
+                        "quality_score"
+                    )
                 )
 
-                if quality_score is not None:
-
+                if (
+                    quality_score
+                    is not None
+                ):
                     JobStateManager.set_confidence(
                         job,
                         quality_score,
@@ -584,34 +749,39 @@ class ResearchService:
                 # REFLECTION COUNT
                 # =================================================
 
-                reflection_count = current_state.get(
-                    "reflection_count"
+                reflection_count = (
+                    current_state.get(
+                        "reflection_count"
+                    )
                 )
 
-                if reflection_count is not None:
-
+                if (
+                    reflection_count
+                    is not None
+                ):
                     job.metrics.reflections = max(
                         job.metrics.reflections,
-                        int(reflection_count),
+                        int(
+                            reflection_count
+                        ),
                     )
 
                 # =================================================
                 # SOURCES
                 # =================================================
 
-                search_results = current_state.get(
-                    "search_results"
+                search_results = (
+                    current_state.get(
+                        "search_results"
+                    )
                 )
 
                 if search_results:
-
                     for result in search_results:
-
                         if isinstance(
                             result,
                             dict,
                         ):
-
                             title = result.get(
                                 "title",
                                 "Unknown Source",
@@ -629,7 +799,6 @@ class ResearchService:
                             )
 
                         else:
-
                             JobStateManager.add_source(
                                 job,
                                 str(result),
@@ -639,12 +808,13 @@ class ResearchService:
                 # EVIDENCE
                 # =================================================
 
-                evidence = current_state.get(
-                    "evidence"
+                evidence = (
+                    current_state.get(
+                        "evidence"
+                    )
                 )
 
                 if evidence:
-
                     JobStateManager.set_evidence(
                         job,
                         evidence,
@@ -654,14 +824,53 @@ class ResearchService:
                 # PERSIST
                 # =================================================
 
-                job_store.update(job)
+                job_store.update(
+                    job
+                )
+
+                # =================================================
+                # CANCEL AFTER NODE
+                # =================================================
+
+                if self._should_stop(
+                    job_id,
+                    run_version,
+                ):
+                    if self._is_cancelled(
+                        job_id,
+                        run_version,
+                    ):
+                        self._mark_cancelled(
+                            job
+                        )
+
+                    return
+
+            # ====================================================
+            # DON'T COMPLETE CANCELLED / STALE RUNS
+            # ====================================================
+
+            if self._should_stop(
+                job_id,
+                run_version,
+            ):
+                if self._is_cancelled(
+                    job_id,
+                    run_version,
+                ):
+                    self._mark_cancelled(
+                        job
+                    )
+
+                return
 
             # ====================================================
             # FINAL RUNTIME
             # ====================================================
 
             runtime = int(
-                time.time() - start_time
+                time.time()
+                - start_time
             )
 
             JobStateManager.set_runtime(
@@ -674,12 +883,8 @@ class ResearchService:
             # ====================================================
 
             JobStateManager.mark_completed(
-                job,
+                job
             )
-
-            # ====================================================
-            # COMPLETION TIMELINE
-            # ====================================================
 
             JobStateManager.add_timeline(
                 job,
@@ -688,20 +893,14 @@ class ResearchService:
                 True,
             )
 
-            # ====================================================
-            # FINAL THINKING
-            # ====================================================
-
             JobStateManager.add_thinking(
                 job,
                 "Final report generated.",
             )
 
-            # ====================================================
-            # FINAL PERSIST
-            # ====================================================
-
-            job_store.update(job)
+            job_store.update(
+                job
+            )
 
             # ====================================================
             # DEBUG
@@ -730,7 +929,9 @@ class ResearchService:
                 "\n========== REPORT ==========\n"
             )
 
-            print(job.report)
+            print(
+                job.report
+            )
 
             print(
                 "\n============================\n"
@@ -759,16 +960,35 @@ class ResearchService:
         # ERROR HANDLING
         # ========================================================
 
-        except Exception as e:
-
+        except Exception as exc:
             traceback.print_exc()
+
+            # ----------------------------------------------------
+            # Never transform a cancelled/stale run into failed.
+            # ----------------------------------------------------
+
+            if self._should_stop(
+                job_id,
+                run_version,
+            ):
+                if self._is_cancelled(
+                    job_id,
+                    run_version,
+                ):
+                    self._mark_cancelled(
+                        job
+                    )
+
+                return
 
             JobStateManager.mark_failed(
                 job,
-                str(e),
+                str(exc),
             )
 
-            job_store.update(job)
+            job_store.update(
+                job
+            )
 
 
 # ================================================================
@@ -776,5 +996,3 @@ class ResearchService:
 # ================================================================
 
 research_service = ResearchService()
-
-

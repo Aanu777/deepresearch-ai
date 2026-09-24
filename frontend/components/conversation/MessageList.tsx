@@ -30,7 +30,7 @@ export default function MessageList() {
     useRef(messages.length);
 
   // ==========================================================
-  // SMART AUTO SCROLL
+  // AUTO SCROLL
   // ==========================================================
 
   useEffect(() => {
@@ -47,21 +47,17 @@ export default function MessageList() {
     previousMessageCount.current =
       messages.length;
 
-    if (!messageCountChanged && !sending) {
-      return;
-    }
-
     const distanceFromBottom =
       container.scrollHeight -
       container.scrollTop -
       container.clientHeight;
 
-    const userIsNearBottom =
-      distanceFromBottom < 160;
+    const nearBottom =
+      distanceFromBottom < 220;
 
     if (
       messageCountChanged &&
-      userIsNearBottom
+      nearBottom
     ) {
       bottomRef.current?.scrollIntoView({
         behavior: "smooth",
@@ -83,7 +79,7 @@ export default function MessageList() {
   ]);
 
   // ==========================================================
-  // EMPTY STATE
+  // EMPTY
   // ==========================================================
 
   if (
@@ -91,7 +87,10 @@ export default function MessageList() {
     messages.length === 0
   ) {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         <EmptyConversation />
       </div>
     );
@@ -107,8 +106,8 @@ export default function MessageList() {
   ) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center">
-        <div className="flex items-center gap-3 text-sm text-white/35">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-cyan-400" />
+        <div className="flex items-center gap-2 text-sm text-white/40">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/10 border-t-white/60" />
 
           <span>
             Loading conversation...
@@ -119,7 +118,7 @@ export default function MessageList() {
   }
 
   // ==========================================================
-  // MESSAGE LIST
+  // CHAT
   // ==========================================================
 
   return (
@@ -130,7 +129,6 @@ export default function MessageList() {
         flex-1
         overflow-y-auto
         overscroll-contain
-        scroll-smooth
       "
     >
       <div
@@ -141,25 +139,34 @@ export default function MessageList() {
           max-w-3xl
           flex-col
           px-4
-          pb-32
+          pb-16
           pt-8
           sm:px-6
+          sm:pt-10
         "
       >
-        <div className="space-y-6">
-  {messages.map((message) => (
-    <MessageBubble
-      key={message.message_id}
-      message={message}
-    />
-  ))}
+        <div className="space-y-8">
+          {messages.map(
+            (message) => (
+              <MessageBubble
+                key={
+                  message.message_id
+                }
+                message={
+                  message
+                }
+              />
+            )
+          )}
 
-  {sending && <TypingIndicator />}
-</div>
+          {sending && (
+            <TypingIndicator />
+          )}
+        </div>
 
         <div
           ref={bottomRef}
-          className="h-px w-full"
+          className="h-1"
         />
       </div>
     </div>

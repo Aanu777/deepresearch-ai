@@ -2,429 +2,308 @@
 
 import {
   motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
 } from "framer-motion";
 
-import HeroBadge from "./HeroBadge";
-import HeroHeadline from "./HeroHeadline";
-import HeroButtons from "./HeroButtons";
-import HeroStats from "./HeroStats";
-import HeroVisual from "./HeroVisual";
+import {
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  Globe2,
+  Search,
+  Sparkles,
+} from "lucide-react";
+
+import Link from "next/link";
+
+const stages = [
+  {
+    name: "Planning",
+    active: false,
+  },
+  {
+    name: "Searching",
+    active: false,
+  },
+  {
+    name: "Extracting",
+    active: false,
+  },
+  {
+    name: "Synthesizing",
+    active: true,
+  },
+];
 
 export default function Hero() {
-  // ============================================================
-  // MOUSE PARALLAX
-  // ============================================================
-
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  const smoothX = useSpring(mouseX, {
-    stiffness: 45,
-    damping: 20,
-    mass: 0.5,
-  });
-
-  const smoothY = useSpring(mouseY, {
-    stiffness: 45,
-    damping: 20,
-    mass: 0.5,
-  });
-
-  const glowX = useTransform(
-    smoothX,
-    [-1, 1],
-    [-35, 35]
-  );
-
-  const glowY = useTransform(
-    smoothY,
-    [-1, 1],
-    [-25, 25]
-  );
-
-  const visualX = useTransform(
-    smoothX,
-    [-1, 1],
-    [-8, 8]
-  );
-
-  const visualY = useTransform(
-    smoothY,
-    [-1, 1],
-    [-6, 6]
-  );
-
-  function handleMouseMove(
-    event: React.MouseEvent<HTMLElement>
-  ) {
-    const rect =
-      event.currentTarget.getBoundingClientRect();
-
-    const x =
-      (event.clientX - rect.left) /
-        rect.width -
-      0.5;
-
-    const y =
-      (event.clientY - rect.top) /
-        rect.height -
-      0.5;
-
-    mouseX.set(x * 2);
-    mouseY.set(y * 2);
-  }
-
-  function handleMouseLeave() {
-    mouseX.set(0);
-    mouseY.set(0);
-  }
-
   return (
     <section
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
       className="
         relative
-        isolate
         overflow-hidden
+        border-b
+        border-white/[0.06]
+        bg-[#050505]
+        pb-24
         pt-32
-        pb-28
+        sm:pb-28
+        sm:pt-36
+        lg:pb-32
       "
     >
+      {/* BACKGROUND */}
 
-      {/* ====================================================== */}
-      {/* AMBIENT BACKGROUND */}
-      {/* ====================================================== */}
-
-      <div className="pointer-events-none absolute inset-0">
-
-        {/* Main reactive cyan glow */}
-
-        <motion.div
-          style={{
-            x: glowX,
-            y: glowY,
-          }}
-          initial={{
-            opacity: 0,
-            scale: 0.8,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-          transition={{
-            duration: 1.8,
-            ease: "easeOut",
-          }}
+      <div
+        className="
+          pointer-events-none
+          absolute
+          inset-0
+        "
+      >
+        <div
           className="
             absolute
             left-1/2
-            top-[-180px]
-            h-[760px]
-            w-[760px]
+            top-[-320px]
+            h-[640px]
+            w-[900px]
             -translate-x-1/2
             rounded-full
-            bg-cyan-500/[0.09]
-            blur-[180px]
-          "
-        />
-
-        {/* Secondary blue glow */}
-
-        <motion.div
-          animate={{
-            x: [-20, 20, -20],
-            y: [0, 25, 0],
-            opacity: [0.45, 0.7, 0.45],
-          }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="
-            absolute
-            left-[8%]
-            top-[420px]
-            h-[420px]
-            w-[420px]
-            rounded-full
-            bg-blue-500/[0.07]
+            bg-cyan-400/[0.045]
             blur-[150px]
           "
         />
-
-        {/* Right atmospheric glow */}
-
-        <motion.div
-          animate={{
-            x: [20, -20, 20],
-            y: [0, -20, 0],
-            opacity: [0.3, 0.55, 0.3],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-          className="
-            absolute
-            right-[5%]
-            top-[520px]
-            h-[360px]
-            w-[360px]
-            rounded-full
-            bg-cyan-400/[0.05]
-            blur-[140px]
-          "
-        />
-
-        {/* ================================================== */}
-        {/* HERO ORBIT */}
-        {/* ================================================== */}
-
-        <motion.div
-          style={{
-            x: glowX,
-            y: glowY,
-          }}
-          initial={{
-            opacity: 0,
-            scale: 0.85,
-          }}
-          animate={{
-            opacity: 1,
-            scale: 1,
-          }}
-          transition={{
-            duration: 1.6,
-            delay: 0.2,
-            ease: "easeOut",
-          }}
-          className="
-            absolute
-            left-1/2
-            top-[390px]
-            h-[680px]
-            w-[680px]
-            -translate-x-1/2
-            rounded-full
-            border
-            border-cyan-400/[0.045]
-            sm:h-[820px]
-            sm:w-[820px]
-          "
-        />
-
-        <motion.div
-          animate={{
-            rotate: 360,
-          }}
-          transition={{
-            duration: 35,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="
-            absolute
-            left-1/2
-            top-[450px]
-            hidden
-            h-[560px]
-            w-[560px]
-            -translate-x-1/2
-            rounded-full
-            border
-            border-dashed
-            border-cyan-400/[0.06]
-            lg:block
-          "
-        >
-          <span
-            className="
-              absolute
-              -right-1
-              top-1/2
-              h-2
-              w-2
-              rounded-full
-              bg-cyan-300
-              shadow-[0_0_18px_rgba(34,211,238,0.9)]
-            "
-          />
-        </motion.div>
-
-        {/* ================================================== */}
-        {/* GRID */}
-        {/* ================================================== */}
 
         <div
           className="
             absolute
             inset-0
-            opacity-[0.035]
-            [background-image:linear-gradient(to_right,#ffffff_1px,transparent_1px),linear-gradient(to_bottom,#ffffff_1px,transparent_1px)]
-            [background-size:72px_72px]
+            opacity-[0.018]
+            [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)]
+            [background-size:56px_56px]
           "
         />
-
-        {/* ================================================== */}
-        {/* TOP VIGNETTE */}
-        {/* ================================================== */}
-
-        <div
-          className="
-            absolute
-            inset-x-0
-            top-0
-            h-40
-            bg-gradient-to-b
-            from-[#06070b]
-            to-transparent
-          "
-        />
-
-        {/* ================================================== */}
-        {/* BOTTOM FADE */}
-        {/* ================================================== */}
 
         <div
           className="
             absolute
             inset-x-0
             bottom-0
-            h-56
+            h-40
             bg-gradient-to-t
-            from-[#06070b]
+            from-[#050505]
             to-transparent
           "
         />
-
       </div>
-
-
-      {/* ====================================================== */}
-      {/* HERO CONTENT */}
-      {/* ====================================================== */}
 
       <div
         className="
           relative
           z-10
           mx-auto
-          flex
-          max-w-7xl
-          flex-col
-          items-center
-          px-6
-          text-center
+          w-full
+          max-w-[1200px]
+          px-4
+          sm:px-6
+          lg:px-8
         "
       >
+        {/* HERO COPY */}
 
-        {/* ================================================== */}
-        {/* BADGE */}
-        {/* ================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 18,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.65,
-            ease: "easeOut",
-          }}
+        <div
+          className="
+            mx-auto
+            max-w-4xl
+            text-center
+          "
         >
-          <HeroBadge />
-        </motion.div>
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 12,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.45,
+            }}
+            className="
+              mx-auto
+              inline-flex
+              items-center
+              gap-2
+              rounded-full
+              border
+              border-white/[0.08]
+              bg-white/[0.025]
+              px-3
+              py-1.5
+              text-xs
+              font-medium
+              text-white/45
+            "
+          >
+            <Sparkles
+              size={13}
+              className="text-cyan-300"
+            />
 
+            Autonomous research, grounded in sources
+          </motion.div>
 
-        {/* ================================================== */}
-        {/* HEADLINE */}
-        {/* ================================================== */}
+          <motion.h1
+            initial={{
+              opacity: 0,
+              y: 16,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.55,
+              delay: 0.08,
+            }}
+            className="
+              mx-auto
+              mt-7
+              max-w-4xl
+              text-[42px]
+              font-semibold
+              leading-[1.04]
+              tracking-[-0.055em]
+              text-white
+              sm:text-6xl
+              lg:text-[76px]
+            "
+          >
+            Research beyond
+            <span
+              className="
+                block
+                text-white/38
+              "
+            >
+              a single answer.
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{
+              opacity: 0,
+              y: 14,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.55,
+              delay: 0.16,
+            }}
+            className="
+              mx-auto
+              mt-6
+              max-w-2xl
+              text-[15px]
+              leading-7
+              text-white/38
+              sm:text-base
+            "
+          >
+            DeepResearch searches the web, analyzes evidence,
+            reflects on findings, and turns complex questions into
+            structured reports with traceable sources.
+          </motion.p>
+
+          {/* ACTIONS */}
+
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 14,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            transition={{
+              duration: 0.55,
+              delay: 0.24,
+            }}
+            className="
+              mt-8
+              flex
+              flex-col
+              items-center
+              justify-center
+              gap-3
+              sm:flex-row
+            "
+          >
+            <Link
+              href="/workspace"
+              className="
+                inline-flex
+                h-11
+                w-full
+                items-center
+                justify-center
+                gap-2
+                rounded-xl
+                bg-white
+                px-5
+                text-sm
+                font-semibold
+                !text-black
+                transition-colors
+                hover:bg-white/85
+                sm:w-auto
+              "
+            >
+              Start researching
+
+              <ArrowRight
+                size={15}
+              />
+            </Link>
+
+            <Link
+              href="/conversation"
+              className="
+                inline-flex
+                h-11
+                w-full
+                items-center
+                justify-center
+                rounded-xl
+                border
+                border-white/[0.09]
+                bg-white/[0.025]
+                px-5
+                text-sm
+                font-medium
+                text-white/60
+                transition-colors
+                hover:bg-white/[0.05]
+                hover:text-white
+                sm:w-auto
+              "
+            >
+              Open conversation
+            </Link>
+          </motion.div>
+        </div>
+
+        {/* PRODUCT PREVIEW */}
 
         <motion.div
           initial={{
             opacity: 0,
-            y: 24,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.75,
-            delay: 0.12,
-            ease: "easeOut",
-          }}
-        >
-          <HeroHeadline />
-        </motion.div>
-
-
-        {/* ================================================== */}
-        {/* BUTTONS */}
-        {/* ================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-            delay: 0.24,
-            ease: "easeOut",
-          }}
-        >
-          <HeroButtons />
-        </motion.div>
-
-
-        {/* ================================================== */}
-        {/* STATS */}
-        {/* ================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 18,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-            delay: 0.36,
-            ease: "easeOut",
-          }}
-        >
-          <HeroStats />
-        </motion.div>
-
-
-        {/* ================================================== */}
-        {/* RESEARCH VISUAL */}
-        {/* ================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 45,
-            scale: 0.97,
+            y: 30,
+            scale: 0.985,
           }}
           animate={{
             opacity: 1,
@@ -432,230 +311,397 @@ export default function Hero() {
             scale: 1,
           }}
           transition={{
-            duration: 1,
-            delay: 0.5,
-            ease: [0.22, 1, 0.36, 1],
+            duration: 0.7,
+            delay: 0.35,
+            ease: [
+              0.22,
+              1,
+              0.36,
+              1,
+            ],
           }}
           className="
             relative
-            mt-20
-            w-full
+            mx-auto
+            mt-16
+            max-w-5xl
           "
         >
-
-          {/* ================================================== */}
-          {/* FLOATING RESEARCH STATUS */}
-          {/* ================================================== */}
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              x: -20,
-            }}
-            animate={{
-              opacity: 1,
-              x: 0,
-            }}
-            transition={{
-              duration: 0.7,
-              delay: 1.15,
-            }}
-            className="
-              absolute
-              -left-3
-              top-12
-              z-20
-              hidden
-              items-center
-              gap-2
-              rounded-full
-              border
-              border-white/[0.08]
-              bg-[#0a0d12]/80
-              px-3
-              py-2
-              text-[11px]
-              text-slate-400
-              shadow-2xl
-              backdrop-blur-xl
-              lg:flex
-            "
-          >
-            <span
-              className="
-                h-1.5
-                w-1.5
-                animate-pulse
-                rounded-full
-                bg-cyan-400
-                shadow-[0_0_10px_rgba(34,211,238,0.8)]
-              "
-            />
-
-            Searching trusted sources
-          </motion.div>
-
-
-          <motion.div
-            initial={{
-              opacity: 0,
-              x: 20,
-            }}
-            animate={{
-              opacity: 1,
-              x: 0,
-            }}
-            transition={{
-              duration: 0.7,
-              delay: 1.35,
-            }}
-            className="
-              absolute
-              -right-3
-              bottom-12
-              z-20
-              hidden
-              items-center
-              gap-2
-              rounded-full
-              border
-              border-white/[0.08]
-              bg-[#0a0d12]/80
-              px-3
-              py-2
-              text-[11px]
-              text-slate-400
-              shadow-2xl
-              backdrop-blur-xl
-              lg:flex
-            "
-          >
-            <span
-              className="
-                h-1.5
-                w-1.5
-                animate-pulse
-                rounded-full
-                bg-emerald-400
-                shadow-[0_0_10px_rgba(52,211,153,0.8)]
-              "
-            />
-
-            Claims verified
-          </motion.div>
-
-
-          {/* ================================================== */}
-          {/* OUTER GLOW */}
-          {/* ================================================== */}
-
-          <motion.div
-            style={{
-              x: glowX,
-              y: glowY,
-            }}
+          <div
             className="
               pointer-events-none
               absolute
-              -inset-10
-              rounded-[40px]
-              bg-cyan-400/[0.035]
+              -inset-8
+              bg-cyan-400/[0.025]
               blur-3xl
             "
           />
 
-
-          {/* ================================================== */}
-          {/* VISUAL */}
-          {/* ================================================== */}
-
-          <motion.div
-            style={{
-              x: visualX,
-              y: visualY,
-            }}
-            className="relative"
-          >
-            <HeroVisual />
-          </motion.div>
-
-        </motion.div>
-
-
-        {/* ================================================== */}
-        {/* SCROLL INDICATOR */}
-        {/* ================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-          }}
-          animate={{
-            opacity: 1,
-          }}
-          transition={{
-            duration: 0.8,
-            delay: 1.6,
-          }}
-          className="
-            mt-16
-            flex
-            flex-col
-            items-center
-            gap-3
-            text-[10px]
-            font-medium
-            uppercase
-            tracking-[0.25em]
-            text-slate-600
-          "
-        >
-          <span>
-            Explore
-          </span>
-
-          <motion.div
-            animate={{
-              y: [0, 6, 0],
-            }}
-            transition={{
-              duration: 1.6,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+          <div
             className="
-              flex
-              h-8
-              w-5
-              items-start
-              justify-center
-              rounded-full
+              relative
+              overflow-hidden
+              rounded-2xl
               border
-              border-white/[0.12]
-              p-1.5
+              border-white/[0.09]
+              bg-[#0d0d0d]
+              shadow-[0_32px_90px_rgba(0,0,0,0.45)]
             "
           >
-            <motion.span
-              animate={{
-                opacity: [0.3, 1, 0.3],
-              }}
-              transition={{
-                duration: 1.6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+            {/* PREVIEW HEADER */}
+
+            <div
               className="
-                h-1.5
-                w-1
-                rounded-full
-                bg-cyan-400
+                flex
+                h-12
+                items-center
+                justify-between
+                border-b
+                border-white/[0.06]
+                px-4
               "
-            />
-          </motion.div>
+            >
+              <div
+                className="
+                  flex
+                  items-center
+                  gap-2
+                "
+              >
+                <span
+                  className="
+                    h-2
+                    w-2
+                    rounded-full
+                    bg-cyan-400
+                  "
+                />
+
+                <span
+                  className="
+                    text-xs
+                    font-medium
+                    text-white/55
+                  "
+                >
+                  Deep Research
+                </span>
+              </div>
+
+              <span
+                className="
+                  text-[10px]
+                  text-white/20
+                "
+              >
+                Live workflow preview
+              </span>
+            </div>
+
+            <div
+              className="
+                grid
+                lg:grid-cols-[1fr_280px]
+              "
+            >
+              {/* REPORT */}
+
+              <div
+                className="
+                  min-w-0
+                  p-5
+                  sm:p-7
+                "
+              >
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-2
+                    text-[11px]
+                    text-white/25
+                  "
+                >
+                  <Search
+                    size={13}
+                  />
+
+                  Research query
+                </div>
+
+                <p
+                  className="
+                    mt-3
+                    max-w-xl
+                    text-base
+                    font-medium
+                    leading-7
+                    text-white/85
+                  "
+                >
+                  How are autonomous AI agents changing software
+                  research workflows?
+                </p>
+
+                <div
+                  className="
+                    mt-8
+                    border-t
+                    border-white/[0.06]
+                    pt-6
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      items-center
+                      gap-2
+                    "
+                  >
+                    <FileText
+                      size={15}
+                      className="text-white/30"
+                    />
+
+                    <span
+                      className="
+                        text-xs
+                        font-medium
+                        text-white/55
+                      "
+                    >
+                      Research report
+                    </span>
+                  </div>
+
+                  <div
+                    className="
+                      mt-5
+                      space-y-4
+                    "
+                  >
+                    <PreviewLine width="88%" />
+                    <PreviewLine width="96%" />
+                    <PreviewLine width="82%" />
+
+                    <div
+                      className="
+                        pt-2
+                        text-sm
+                        font-semibold
+                        text-white/75
+                      "
+                    >
+                      Key findings
+                    </div>
+
+                    <PreviewLine width="94%" />
+                    <PreviewLine width="76%" />
+                  </div>
+
+                  <div
+                    className="
+                      mt-7
+                      flex
+                      flex-wrap
+                      gap-2
+                    "
+                  >
+                    <SourceChip>
+                      <Globe2
+                        size={12}
+                      />
+                      12 sources
+                    </SourceChip>
+
+                    <SourceChip>
+                      <CheckCircle2
+                        size={12}
+                      />
+                      Evidence linked
+                    </SourceChip>
+                  </div>
+                </div>
+              </div>
+
+              {/* WORKFLOW */}
+
+              <div
+                className="
+                  border-t
+                  border-white/[0.06]
+                  bg-[#101010]
+                  p-5
+                  lg:border-l
+                  lg:border-t-0
+                "
+              >
+                <p
+                  className="
+                    text-[11px]
+                    font-medium
+                    uppercase
+                    tracking-[0.12em]
+                    text-white/25
+                  "
+                >
+                  Research pipeline
+                </p>
+
+                <div
+                  className="
+                    mt-5
+                    space-y-2
+                  "
+                >
+                  {stages.map(
+                    (
+                      stage,
+                      index
+                    ) => (
+                      <div
+                        key={
+                          stage.name
+                        }
+                        className="
+                          flex
+                          items-center
+                          gap-3
+                          rounded-xl
+                          border
+                          border-white/[0.06]
+                          bg-white/[0.02]
+                          px-3
+                          py-3
+                        "
+                      >
+                        <div
+                          className={`
+                            flex
+                            h-6
+                            w-6
+                            shrink-0
+                            items-center
+                            justify-center
+                            rounded-full
+                            text-[10px]
+                            font-medium
+                            ${
+                              stage.active
+                                ? "bg-cyan-400/[0.10] text-cyan-300"
+                                : "bg-white/[0.04] text-white/25"
+                            }
+                          `}
+                        >
+                          {index + 1}
+                        </div>
+
+                        <span
+                          className={`
+                            text-xs
+                            ${
+                              stage.active
+                                ? "text-white/75"
+                                : "text-white/35"
+                            }
+                          `}
+                        >
+                          {stage.name}
+                        </span>
+
+                        {stage.active && (
+                          <span
+                            className="
+                              ml-auto
+                              h-1.5
+                              w-1.5
+                              animate-pulse
+                              rounded-full
+                              bg-cyan-400
+                            "
+                          />
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </motion.div>
 
-      </div>
+        {/* TRUST ROW */}
 
+        <div
+          className="
+            mx-auto
+            mt-8
+            flex
+            max-w-3xl
+            flex-wrap
+            items-center
+            justify-center
+            gap-x-7
+            gap-y-2
+            text-[11px]
+            text-white/22
+          "
+        >
+          <span>Live web research</span>
+          <span>•</span>
+          <span>PDF analysis</span>
+          <span>•</span>
+          <span>Source-backed reports</span>
+          <span>•</span>
+          <span>Multi-step reasoning</span>
+        </div>
+      </div>
     </section>
+  );
+}
+
+function PreviewLine({
+  width,
+}: {
+  width: string;
+}) {
+  return (
+    <div
+      className="
+        h-2
+        rounded-full
+        bg-white/[0.055]
+      "
+      style={{
+        width,
+      }}
+    />
+  );
+}
+
+function SourceChip({
+  children,
+}: {
+  children:
+    React.ReactNode;
+}) {
+  return (
+    <span
+      className="
+        inline-flex
+        items-center
+        gap-1.5
+        rounded-full
+        border
+        border-white/[0.06]
+        bg-white/[0.025]
+        px-2.5
+        py-1.5
+        text-[10px]
+        text-white/30
+      "
+    >
+      {children}
+    </span>
   );
 }

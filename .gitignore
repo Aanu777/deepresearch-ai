@@ -1,14 +1,14 @@
-@"
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
 *.pyo
 .venv/
 venv/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Environment / secrets
-.env.local
 .env
 .env.*
 !.env.example
@@ -16,10 +16,12 @@ venv/
 # Backend generated/user data
 backend/uploads/
 
-# Node
+# Node / Next.js
 node_modules/
 .next/
 out/
+dist/
+coverage/
 *.tsbuildinfo
 
 # Logs
@@ -30,7 +32,3 @@ out/
 Thumbs.db
 .vscode/
 .idea/
-"@ | Set-Content .gitignore
-backend/.env
-
-backend/.env

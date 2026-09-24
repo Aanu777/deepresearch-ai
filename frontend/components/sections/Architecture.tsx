@@ -1,531 +1,299 @@
 "use client";
 
-import { motion } from "framer-motion";
+import {
+  motion,
+} from "framer-motion";
+
 import {
   BrainCircuit,
+  FileSearch,
+  FileText,
+  RefreshCw,
   Search,
   Sparkles,
-  ShieldCheck,
-  FileText,
-  ArrowRight,
-  Activity,
 } from "lucide-react";
-
-import Section from "@/components/ui/Section";
-import Heading from "@/components/ui/Heading";
 
 const pipeline = [
   {
-    icon: BrainCircuit,
-    title: "Planner",
+    icon:
+      BrainCircuit,
+    title:
+      "Planner",
     description:
-      "Breaks the research request into intelligent subtasks.",
+      "Breaks the research request into a structured plan.",
   },
   {
-    icon: Search,
-    title: "Searcher",
+    icon:
+      Search,
+    title:
+      "Searcher",
     description:
-      "Collects relevant information from trusted online sources.",
+      "Collects relevant information from external sources.",
   },
   {
-    icon: Sparkles,
-    title: "Reflection",
+    icon:
+      FileSearch,
+    title:
+      "Extractor",
     description:
-      "Reasons over findings and identifies missing information.",
+      "Pulls useful evidence and context from gathered material.",
   },
   {
-    icon: ShieldCheck,
-    title: "Verifier",
+    icon:
+      RefreshCw,
+    title:
+      "Reflection",
     description:
-      "Cross-checks claims and validates source credibility.",
+      "Reviews findings and identifies gaps that need attention.",
   },
   {
-    icon: FileText,
-    title: "Writer",
+    icon:
+      Sparkles,
+    title:
+      "Synthesizer",
     description:
-      "Produces a polished report with citations and references.",
+      "Combines evidence into a coherent understanding.",
+  },
+  {
+    icon:
+      FileText,
+    title:
+      "Writer",
+    description:
+      "Produces the final structured research report.",
   },
 ];
 
 export default function Architecture() {
   return (
-    <Section id="architecture">
-      <Heading
-        eyebrow="Research Pipeline"
-        title="How DeepResearch Thinks"
-        description="Instead of asking one model to do everything, DeepResearch coordinates multiple specialized AI agents that work together to produce reliable research."
-      />
-
-      {/* ====================================================== */}
-      {/* PIPELINE */}
-      {/* ====================================================== */}
-
-      <div className="relative mx-auto mt-20 max-w-6xl">
-
-        {/* Ambient glow */}
-
-        <div
-          className="
-            pointer-events-none
-            absolute
-            left-1/2
-            top-1/2
-            h-[600px]
-            w-[600px]
-            -translate-x-1/2
-            -translate-y-1/2
-            rounded-full
-            bg-cyan-500/[0.035]
-            blur-[140px]
-          "
-        />
-
-        {/* ================================================== */}
-        {/* DESKTOP FLOW LINE */}
-        {/* ================================================== */}
+    <section
+      id="architecture"
+      className="
+        border-b
+        border-white/[0.06]
+        bg-[#050505]
+        py-24
+        sm:py-28
+      "
+    >
+      <div
+        className="
+          mx-auto
+          w-full
+          max-w-[1200px]
+          px-4
+          sm:px-6
+          lg:px-8
+        "
+      >
+        {/* HEADER */}
 
         <div
           className="
-            pointer-events-none
-            absolute
-            left-[10%]
-            right-[10%]
-            top-[78px]
-            hidden
-            h-px
-            bg-gradient-to-r
-            from-transparent
-            via-cyan-400/20
-            to-transparent
-            xl:block
+            max-w-2xl
           "
-        />
+        >
+          <p
+            className="
+              text-xs
+              font-medium
+              text-cyan-300
+            "
+          >
+            Architecture
+          </p>
 
-        {/* Animated signal */}
+          <h2
+            className="
+              mt-3
+              text-3xl
+              font-semibold
+              tracking-[-0.04em]
+              text-white
+              sm:text-4xl
+            "
+          >
+            One request.
+            Multiple specialized stages.
+          </h2>
 
-        <motion.div
-          initial={{
-            left: "10%",
-            opacity: 0,
-          }}
-          whileInView={{
-            left: "90%",
-            opacity: [0, 1, 1, 0],
-          }}
-          transition={{
-            duration: 4,
-            delay: 0.5,
-            ease: "easeInOut",
-          }}
-          viewport={{
-            once: true,
-          }}
+          <p
+            className="
+              mt-4
+              max-w-xl
+              text-sm
+              leading-7
+              text-white/32
+            "
+          >
+            Instead of asking one model to perform the entire task
+            at once, DeepResearch passes state through a structured
+            research pipeline.
+          </p>
+        </div>
+
+        {/* PIPELINE */}
+
+        <div
           className="
-            pointer-events-none
-            absolute
-            top-[74px]
-            z-20
-            hidden
-            h-[8px]
-            w-[8px]
-            -translate-x-1/2
-            rounded-full
-            bg-cyan-300
-            shadow-[0_0_20px_rgba(34,211,238,0.95)]
-            xl:block
+            mt-14
+            overflow-hidden
+            rounded-2xl
+            border
+            border-white/[0.07]
+            bg-[#0d0d0d]
           "
-        />
+        >
+          {pipeline.map(
+            (
+              step,
+              index
+            ) => {
+              const Icon =
+                step.icon;
 
-        {/* ================================================== */}
-        {/* AGENT GRID */}
-        {/* ================================================== */}
-
-        <div className="grid gap-5 xl:grid-cols-5">
-
-          {pipeline.map((step, index) => {
-            const Icon = step.icon;
-
-            return (
-              <motion.div
-                key={step.title}
-                initial={{
-                  opacity: 0,
-                  y: 35,
-                }}
-                whileInView={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  duration: 0.65,
-                  delay: index * 0.1,
-                  ease: [0.22, 1, 0.36, 1],
-                }}
-                viewport={{
-                  once: true,
-                  margin: "-80px",
-                }}
-                className="group relative"
-              >
-
-                {/* ================================================= */}
-                {/* MOBILE / TABLET CONNECTOR */}
-                {/* ================================================= */}
-
-                {index !== pipeline.length - 1 && (
-                  <div
-                    className="
-                      pointer-events-none
-                      absolute
-                      bottom-[-22px]
-                      left-1/2
-                      z-20
-                      flex
-                      -translate-x-1/2
-                      xl:hidden
-                    "
-                  >
-                    <ArrowRight
-                      size={20}
-                      className="
-                        rotate-90
-                        text-cyan-400/30
-                        transition-all
-                        duration-300
-                        group-hover:text-cyan-400/70
-                      "
-                    />
-                  </div>
-                )}
-
-                {/* ================================================= */}
-                {/* CARD */}
-                {/* ================================================= */}
-
-                <div
+              return (
+                <motion.div
+                  key={
+                    step.title
+                  }
+                  initial={{
+                    opacity: 0,
+                    x: -12,
+                  }}
+                  whileInView={{
+                    opacity: 1,
+                    x: 0,
+                  }}
+                  viewport={{
+                    once: true,
+                  }}
+                  transition={{
+                    duration: 0.4,
+                    delay:
+                      index *
+                      0.05,
+                  }}
                   className="
-                    relative
-                    h-full
-                    min-h-[280px]
-                    overflow-hidden
-                    rounded-[28px]
-                    border
-                    border-white/[0.08]
-                    bg-[#0a1018]/90
-                    p-7
-                    backdrop-blur-xl
-                    transition-all
-                    duration-500
-                    group-hover:-translate-y-2
-                    group-hover:border-cyan-400/25
-                    group-hover:bg-[#0d1621]
-                    group-hover:shadow-[0_25px_70px_rgba(0,0,0,0.35)]
+                    group
+                    grid
+                    gap-4
+                    border-b
+                    border-white/[0.06]
+                    p-4
+                    transition-colors
+                    last:border-b-0
+                    hover:bg-white/[0.02]
+                    sm:grid-cols-[44px_160px_1fr_70px]
+                    sm:items-center
+                    sm:p-5
                   "
                 >
-
-                  {/* Top accent */}
-
-                  <div
-                    className="
-                      absolute
-                      inset-x-0
-                      top-0
-                      h-px
-                      bg-gradient-to-r
-                      from-transparent
-                      via-cyan-400/0
-                      to-transparent
-                      transition-all
-                      duration-500
-                      group-hover:via-cyan-400/60
-                    "
-                  />
-
-                  {/* Hover glow */}
-
-                  <div
-                    className="
-                      pointer-events-none
-                      absolute
-                      -right-20
-                      -top-20
-                      h-44
-                      w-44
-                      rounded-full
-                      bg-cyan-400/0
-                      blur-[70px]
-                      transition-all
-                      duration-500
-                      group-hover:bg-cyan-400/10
-                    "
-                  />
-
-                  {/* Agent number */}
-
-                  <div
-                    className="
-                      absolute
-                      right-6
-                      top-6
-                      text-[11px]
-                      font-semibold
-                      tracking-[0.2em]
-                      text-slate-700
-                      transition-colors
-                      duration-300
-                      group-hover:text-cyan-400/40
-                    "
-                  >
-                    0{index + 1}
-                  </div>
-
-                  {/* ================================================= */}
                   {/* ICON */}
-                  {/* ================================================= */}
 
                   <div
                     className="
-                      relative
                       flex
-                      h-16
-                      w-16
+                      h-9
+                      w-9
                       items-center
                       justify-center
-                      rounded-2xl
+                      rounded-lg
                       border
-                      border-cyan-400/10
-                      bg-cyan-400/[0.06]
-                      transition-all
-                      duration-500
-                      group-hover:border-cyan-400/25
-                      group-hover:bg-cyan-400/[0.11]
-                      group-hover:shadow-[0_0_35px_rgba(34,211,238,0.12)]
+                      border-white/[0.07]
+                      bg-white/[0.025]
                     "
                   >
                     <Icon
-                      size={29}
-                      strokeWidth={1.7}
-                      className="
-                        text-cyan-400
-                        transition-transform
-                        duration-500
-                        group-hover:scale-110
-                      "
+                      size={16}
+                      className={
+                        index ===
+                        0
+                          ? "text-cyan-300"
+                          : "text-white/35"
+                      }
                     />
                   </div>
 
-                  {/* ================================================= */}
-                  {/* STATUS */}
-                  {/* ================================================= */}
+                  {/* NAME */}
 
-                  <div className="mt-7 flex items-center gap-2">
-
-                    <span
+                  <div>
+                    <p
                       className="
-                        relative
-                        flex
-                        h-2
-                        w-2
+                        text-sm
+                        font-medium
+                        text-white/70
                       "
                     >
-                      <span
-                        className="
-                          absolute
-                          inline-flex
-                          h-full
-                          w-full
-                          animate-ping
-                          rounded-full
-                          bg-cyan-400/40
-                        "
-                      />
+                      {step.title}
+                    </p>
 
-                      <span
-                        className="
-                          relative
-                          inline-flex
-                          h-2
-                          w-2
-                          rounded-full
-                          bg-cyan-400
-                        "
-                      />
-                    </span>
-
-                    <span
+                    <p
                       className="
-                        flex
-                        items-center
-                        gap-1.5
+                        mt-0.5
                         text-[10px]
-                        font-semibold
-                        uppercase
-                        tracking-[0.18em]
-                        text-cyan-400/60
+                        text-white/18
+                        sm:hidden
                       "
                     >
-                      <Activity size={11} />
-                      Agent active
-                    </span>
-
+                      Stage {index + 1}
+                    </p>
                   </div>
 
-                  {/* ================================================= */}
-                  {/* CONTENT */}
-                  {/* ================================================= */}
-
-                  <h3
-                    className="
-                      mt-4
-                      text-xl
-                      font-semibold
-                      tracking-tight
-                      text-white
-                    "
-                  >
-                    {step.title}
-                  </h3>
+                  {/* DESCRIPTION */}
 
                   <p
                     className="
-                      mt-3
-                      text-sm
-                      leading-6
-                      text-slate-400
+                      text-xs
+                      leading-5
+                      text-white/28
                     "
                   >
                     {step.description}
                   </p>
 
-                  {/* ================================================= */}
-                  {/* BOTTOM LINE */}
-                  {/* ================================================= */}
+                  {/* STAGE */}
 
-                  <div
+                  <span
                     className="
-                      absolute
-                      bottom-0
-                      left-7
-                      right-7
-                      h-px
-                      bg-gradient-to-r
-                      from-cyan-400/0
-                      via-cyan-400/0
-                      to-cyan-400/0
-                      transition-all
-                      duration-500
-                      group-hover:via-cyan-400/20
-                    "
-                  />
-
-                </div>
-
-                {/* ================================================= */}
-                {/* DESKTOP ARROW */}
-                {/* ================================================= */}
-
-                {index !== pipeline.length - 1 && (
-                  <div
-                    className="
-                      pointer-events-none
-                      absolute
-                      -right-[14px]
-                      top-[70px]
-                      z-30
                       hidden
-                      h-7
-                      w-7
-                      items-center
-                      justify-center
-                      rounded-full
-                      border
-                      border-cyan-400/10
-                      bg-[#06070b]
-                      xl:flex
+                      text-right
+                      text-[10px]
+                      font-medium
+                      text-white/15
+                      sm:block
                     "
                   >
-                    <ArrowRight
-                      size={14}
-                      className="
-                        text-cyan-400/50
-                        transition-all
-                        duration-300
-                        group-hover:text-cyan-400
-                      "
-                    />
-                  </div>
-                )}
-
-              </motion.div>
-            );
-          })}
-
+                    0{index + 1}
+                  </span>
+                </motion.div>
+              );
+            }
+          )}
         </div>
 
-        {/* ====================================================== */}
-        {/* PIPELINE FOOTER */}
-        {/* ====================================================== */}
-
-        <motion.div
-          initial={{
-            opacity: 0,
-            y: 20,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          transition={{
-            duration: 0.7,
-            delay: 0.7,
-          }}
-          viewport={{
-            once: true,
-          }}
+        <div
           className="
-            mx-auto
-            mt-14
+            mt-5
             flex
-            max-w-xl
             items-center
-            justify-center
-            gap-3
-            text-center
+            gap-2
+            text-[11px]
+            text-white/20
           "
         >
-
-          <div className="h-px flex-1 bg-white/[0.06]" />
-
-          <div
+          <span
             className="
-              flex
-              items-center
-              gap-2
+              h-1.5
+              w-1.5
               rounded-full
-              border
-              border-white/[0.07]
-              bg-white/[0.025]
-              px-4
-              py-2
-              text-[11px]
-              font-medium
-              tracking-wide
-              text-slate-500
+              bg-cyan-400
             "
-          >
-            <BrainCircuit
-              size={13}
-              className="text-cyan-400/70"
-            />
+          />
 
-            Multiple agents. One research system.
-          </div>
-
-          <div className="h-px flex-1 bg-white/[0.06]" />
-
-        </motion.div>
-
+          Each stage contributes to the same evolving research state.
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }

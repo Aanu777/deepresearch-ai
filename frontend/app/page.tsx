@@ -1,25 +1,44 @@
-"use client";
+import {
+  Manrope,
+  Space_Grotesk,
+} from "next/font/google";
 
-import Navbar from "@/components/layout/Navbar";
-import Hero from "@/components/hero/Hero";
+import LandingExperience from "@/components/landing/LandingExperience";
+import LandingNavbar from "@/components/landing/LandingNavbar";
+import SmoothScroll from "@/components/landing/SmoothScroll";
 
-import HowItWorks from "@/components/sections/HowItWorks";
-import Features from "@/components/sections/Features";
-import Architecture from "@/components/sections/Architecture";
-import CTA from "@/components/sections/CTA";
+const manrope = Manrope({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-landing-body",
+});
+
+const spaceGrotesk =
+  Space_Grotesk({
+    subsets: ["latin"],
+    display: "swap",
+    variable:
+      "--font-landing-display",
+  });
 
 export default function Home() {
   return (
-    <>
-      <Navbar />
+    <SmoothScroll>
+      <main
+        className={`
+          ${manrope.variable}
+          ${spaceGrotesk.variable}
+          min-h-screen
+          overflow-x-clip
+          bg-[#050505]
+          text-white
+          [font-family:var(--font-landing-body)]
+        `}
+      >
+        <LandingNavbar />
 
-      <main>
-        <Hero />
-        <HowItWorks />
-        <Features />
-        <Architecture />
-        <CTA />
+        <LandingExperience />
       </main>
-    </>
+    </SmoothScroll>
   );
 }

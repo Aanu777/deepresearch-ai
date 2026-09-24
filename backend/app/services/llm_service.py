@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Any
 
 from openai import OpenAI
 
@@ -14,8 +14,15 @@ class LLMService:
             base_url="https://openrouter.ai/api/v1",
         )
 
+        self.default_system_prompt = (
+            "You are DeepResearch AI, a capable research "
+            "and general-purpose assistant. "
+            "Be accurate, clear, useful, and well structured. "
+            "Do not invent facts when information is uncertain."
+        )
+
     # ========================================================
-    # NORMAL GENERATION
+    # NORMAL PROMPT
     # ========================================================
 
     def generate(
@@ -23,116 +30,139 @@ class LLMService:
         prompt: str,
     ) -> str:
 
-        response = self.client.chat.completions.create(
-            model=settings.OPENROUTER_MODEL,
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a helpful, intelligent AI assistant. "
-                        "Have natural conversations with the user. "
-                        "Be clear, accurate, and conversational. "
-                        "Do not behave like a research report generator "
-                        "unless the user specifically asks for research."
-                    ),
-                },
+        return self.generate_chat(
+            [
                 {
                     "role": "user",
                     "content": prompt,
-                },
-            ],
-            temperature=0.7,
-            max_tokens=1000,
-        )
-
-        return (
-            response.choices[0]
-            .message
-            .content
-            or ""
+                }
+            ]
         )
 
     # ========================================================
-    # CONVERSATION GENERATION
+    # CONVERSATION / MULTIMODAL CHAT
     # ========================================================
 
     def generate_chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        temperature: float = 0.2,
     ) -> str:
 
-        conversation = [
-            {
-                "role": "system",
-                "content": (
-                    "You are DeepResearch AI in Conversation Mode. "
-                    "You are a helpful, intelligent, natural AI assistant. "
-                    "Talk with the user conversationally, like a modern "
-                    "AI assistant. "
-                    "\n\n"
-                    "Rules:"
-                    "\n"
-                    "- Remember and use the conversation history."
-                    "\n"
-                    "- Answer the user's latest message directly."
-                    "\n"
-                    "- Be concise when a short answer is enough."
-                    "\n"
-                    "- Explain things clearly when the user needs detail."
-                    "\n"
-                    "- Do not automatically turn normal conversations "
-                    "into research reports."
-                    "\n"
-                    "- Do not invent information."
-                    "\n"
-                    "- If the user asks for deep research, that should "
-                    "be handled by Deep Research Mode instead."
-                ),
-            }
-        ]
+        prepared_messages: list[
+            dict[str, Any]
+        ] = []
 
         # ----------------------------------------------------
-        # Add conversation history
+        # Add a system message unless the caller already
+        # supplied one.
         # ----------------------------------------------------
 
-        for message in messages:
+        has_system_message = any(
+            message.get("role") == "system"
+            for message in messages
+        )
 
-            role = message.get("role")
-            content = message.get("content")
+        if not has_system_message:
 
-            if role not in {
-                "user",
-                "assistant",
-            }:
-                continue
-
-            if not content:
-                continue
-
-            conversation.append(
+            prepared_messages.append(
                 {
-                    "role": role,
-                    "content": content,
+                    "role": "system",
+                    "content": self.default_system_prompt,
                 }
             )
 
-        # ----------------------------------------------------
-        # Call model
-        # ----------------------------------------------------
-
-        response = self.client.chat.completions.create(
-            model=settings.OPENROUTER_MODEL,
-            messages=conversation,
-            temperature=0.7,
-            max_tokens=1500,
+        prepared_messages.extend(
+            messages
         )
 
-        return (
-            response.choices[0]
+        response = (
+            self.client.chat.completions.create(
+                model=(
+                    model
+                    or settings.OPENROUTER_MODEL
+                ),
+                messages=prepared_messages,  # type: ignore[arg-type]
+                temperature=temperature,
+            )
+        )
+
+        content = (
+            response
+            .choices[0]
             .message
             .content
-            or ""
         )
+
+        return self._normalize_content(
+            content
+        )
+
+    # ========================================================
+    # NORMALIZE OUTPUT
+    # ========================================================
+
+    @staticmethod
+    def _normalize_content(
+        content: Any,
+    ) -> str:
+
+        if content is None:
+            return ""
+
+        if isinstance(
+            content,
+            str,
+        ):
+            return content.strip()
+
+        # Some multimodal providers may return
+        # structured response parts.
+        if isinstance(
+            content,
+            list,
+        ):
+
+            parts: list[str] = []
+
+            for item in content:
+
+                if isinstance(
+                    item,
+                    str,
+                ):
+                    parts.append(
+                        item
+                    )
+                    continue
+
+                if isinstance(
+                    item,
+                    dict,
+                ):
+
+                    text = (
+                        item.get("text")
+                        or item.get("content")
+                    )
+
+                    if isinstance(
+                        text,
+                        str,
+                    ):
+                        parts.append(
+                            text
+                        )
+
+            return (
+                "\n".join(parts)
+                .strip()
+            )
+
+        return str(
+            content
+        ).strip()
 
 
 llm_service = LLMService()

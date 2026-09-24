@@ -1,129 +1,671 @@
-import { api } from "./api";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
-// ============================================================
-// TYPES
-// ============================================================
+
+/* ============================================================
+   API
+   ============================================================ */
+
+const API_URL =
+  (
+    process.env
+      .NEXT_PUBLIC_API_URL ??
+    "http://127.0.0.1:8000/api/v1"
+  ).replace(
+    /\/$/,
+    ""
+  );
+
+
+/* ============================================================
+   CHAT
+   ============================================================ */
 
 export type ConversationChat = {
   chat_id: string;
-  user_id: string;
+
+  user_id?: string;
+
   title: string;
+
+  message_ids?: string[];
+
+  job_ids?: string[];
+
   created_at: string;
+
   updated_at: string;
-  job_ids: string[];
-  message_ids: string[];
 };
+
+
+/* ============================================================
+   MESSAGE TYPES
+   ============================================================ */
+
+export type ConversationMessageType =
+  | "text"
+  | "image";
+
+
+export type ConversationImageOperation =
+  | "generation"
+  | "edit";
+
+
+/* ============================================================
+   MESSAGE
+   ============================================================ */
 
 export type ConversationMessage = {
   message_id: string;
+
   chat_id: string;
-  role: "user" | "assistant";
+
+  role:
+    | "user"
+    | "assistant";
+
+  message_type:
+    ConversationMessageType;
+
+  /* ========================================================
+     TEXT
+     ======================================================== */
+
   content: string;
+
+  /* ========================================================
+     IMAGE
+     ======================================================== */
+
+  image_url:
+    string | null;
+
+  image_prompt:
+    string | null;
+
+  image_operation:
+    ConversationImageOperation | null;
+
+  image_provider:
+    string | null;
+
+  image_model:
+    string | null;
+
+  image_media_type:
+    string | null;
+
+  parent_image_id:
+    string | null;
+
+  /* ========================================================
+     TIME
+     ======================================================== */
+
   created_at: string;
 };
 
-export type ConversationChatResponse = {
-  chat: ConversationChat;
-  jobs: unknown[];
-  messages: ConversationMessage[];
+
+/* ============================================================
+   GET CONVERSATION RESPONSE
+   ============================================================ */
+
+export type ConversationResponse = {
+  chat:
+    ConversationChat;
+
+  jobs?: unknown[];
+
+  messages:
+    ConversationMessage[];
 };
+
+
+/* ============================================================
+   NORMAL SEND RESPONSE
+   ============================================================ */
 
 export type SendMessageResponse = {
-  chat: ConversationChat;
-  user_message: ConversationMessage;
-  assistant_message: ConversationMessage;
+  chat:
+    ConversationChat;
+
+  user_message:
+    ConversationMessage;
+
+  assistant_message:
+    ConversationMessage;
 };
 
-// ============================================================
-// CREATE CHAT
-// ============================================================
 
-export async function createConversation() {
-  const response = await api.post(
-    "/conversations/"
+/* ============================================================
+   EDIT MESSAGE RESPONSE
+   ============================================================ */
+
+export type EditMessageResponse = {
+  chat:
+    ConversationChat;
+
+  messages:
+    ConversationMessage[];
+
+  edited_message:
+    ConversationMessage;
+
+  assistant_message:
+    ConversationMessage;
+};
+
+
+/* ============================================================
+   HISTORY RESPONSE
+   ============================================================ */
+
+export type ConversationHistoryResponse = {
+  total: number;
+
+  chats:
+    ConversationChat[];
+};
+
+
+/* ============================================================
+   TRANSCRIPTION
+   ============================================================ */
+
+export type TranscriptionResult = {
+  text: string;
+};
+
+
+/* ============================================================
+   IMAGE REQUEST
+   ============================================================ */
+
+export type GenerateImageRequest = {
+  chat_id: string;
+
+  prompt: string;
+
+  source_message_id:
+    string | null;
+};
+
+
+/* ============================================================
+   AUTHENTICATED FETCH
+   ============================================================ */
+
+async function authenticatedFetch(
+  path: string,
+  options: RequestInit = {}
+) {
+  const supabase =
+    createClient();
+
+  const {
+    data,
+    error,
+  } =
+    await supabase.auth
+      .getSession();
+
+
+  if (
+    error
+  ) {
+    throw new Error(
+      error.message
+    );
+  }
+
+
+  const accessToken =
+    data.session
+      ?.access_token;
+
+
+  if (
+    !accessToken
+  ) {
+    throw new Error(
+      "You are not signed in."
+    );
+  }
+
+
+  const headers =
+    new Headers(
+      options.headers
+    );
+
+
+  headers.set(
+    "Authorization",
+    `Bearer ${accessToken}`
   );
 
-  return response.data as ConversationChat;
+
+  const response =
+    await fetch(
+      `${API_URL}${path}`,
+      {
+        ...options,
+
+        headers,
+
+        cache:
+          "no-store",
+      }
+    );
+
+
+  if (
+    !response.ok
+  ) {
+    throw new Error(
+      await readApiError(
+        response
+      )
+    );
+  }
+
+
+  return response;
 }
 
-// ============================================================
-// LIST CHATS
-// ============================================================
 
-export async function getConversations() {
-  const response = await api.get(
-    "/conversations/"
+/* ============================================================
+   API ERROR
+   ============================================================ */
+
+async function readApiError(
+  response: Response
+) {
+  try {
+    const data =
+      await response.json();
+
+
+    if (
+      typeof data?.detail ===
+      "string"
+    ) {
+      return data.detail;
+    }
+
+
+    if (
+      typeof data?.message ===
+      "string"
+    ) {
+      return data.message;
+    }
+
+
+    if (
+      Array.isArray(
+        data?.detail
+      )
+    ) {
+      return data.detail
+        .map(
+          (
+            item: {
+              msg?: string;
+            }
+          ) =>
+            item.msg ??
+            "Validation error"
+        )
+        .join(
+          ", "
+        );
+    }
+
+  } catch {
+    // Fall through.
+  }
+
+
+  return (
+    `Request failed ` +
+    `(${response.status}).`
   );
-
-  return response.data as {
-    total: number;
-    chats: ConversationChat[];
-  };
 }
 
-// ============================================================
-// GET CHAT
-// ============================================================
+
+/* ============================================================
+   CREATE CHAT
+   ============================================================ */
+
+export async function createConversation():
+  Promise<ConversationChat> {
+
+  const response =
+    await authenticatedFetch(
+      "/conversations/",
+      {
+        method:
+          "POST",
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   LIST CHATS
+   ============================================================ */
+
+export async function getConversations():
+  Promise<ConversationHistoryResponse> {
+
+  const response =
+    await authenticatedFetch(
+      "/conversations/",
+      {
+        method:
+          "GET",
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   GET CHAT
+   ============================================================ */
 
 export async function getConversation(
   chatId: string
-) {
-  const response = await api.get(
-    `/conversations/${chatId}`
-  );
+): Promise<ConversationResponse> {
 
-  return response.data as ConversationChatResponse;
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}`,
+      {
+        method:
+          "GET",
+      }
+    );
+
+
+  return response.json();
 }
 
-// ============================================================
-// GET MESSAGES
-// ============================================================
+
+/* ============================================================
+   GET MESSAGES
+   ============================================================ */
 
 export async function getConversationMessages(
   chatId: string
-) {
-  const response = await api.get(
-    `/conversations/${chatId}/messages`
-  );
+): Promise<{
+  chat_id: string;
 
-  return response.data as {
-    chat_id: string;
-    total: number;
-    messages: ConversationMessage[];
-  };
+  total: number;
+
+  messages:
+    ConversationMessage[];
+}> {
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}/messages`,
+      {
+        method:
+          "GET",
+      }
+    );
+
+
+  return response.json();
 }
 
-// ============================================================
-// SEND MESSAGE
-// ============================================================
+
+/* ============================================================
+   SEND NORMAL MESSAGE
+   ============================================================ */
 
 export async function sendConversationMessage(
   chatId: string,
   content: string
-) {
-  const response = await api.post(
-    `/conversations/${chatId}/messages`,
-    {
-      content,
+): Promise<SendMessageResponse> {
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}/messages`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            content,
+          }),
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   EDIT EXISTING USER MESSAGE
+   ============================================================ */
+
+export async function editConversationMessage(
+  chatId: string,
+  messageId: string,
+  content: string
+): Promise<EditMessageResponse> {
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}/messages/${encodeURIComponent(
+        messageId
+      )}`,
+      {
+        method:
+          "PATCH",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            content,
+          }),
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   SEND ATTACHMENTS
+   ============================================================ */
+
+export async function sendConversationMessageWithAttachments(
+  chatId: string,
+  content: string,
+  files: File[]
+): Promise<SendMessageResponse> {
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "content",
+    content
+  );
+
+
+  files.forEach(
+    (
+      file
+    ) => {
+      form.append(
+        "files",
+        file,
+        file.name
+      );
     }
   );
 
-  return response.data as SendMessageResponse;
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}/messages-with-attachments`,
+      {
+        method:
+          "POST",
+
+        body:
+          form,
+      }
+    );
+
+
+  return response.json();
 }
 
-// ============================================================
-// DELETE CHAT
-// ============================================================
+
+/* ============================================================
+   TRANSCRIBE AUDIO
+   ============================================================ */
+
+export async function transcribeConversationAudio(
+  audio: Blob,
+  filename =
+    "conversation-recording.webm"
+): Promise<TranscriptionResult> {
+
+  const form =
+    new FormData();
+
+
+  form.append(
+    "audio",
+    audio,
+    filename
+  );
+
+
+  const response =
+    await authenticatedFetch(
+      "/conversations/transcribe",
+      {
+        method:
+          "POST",
+
+        body:
+          form,
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   GENERATE / EDIT IMAGE
+   ============================================================ */
+
+export async function generateConversationImage(
+  chatId: string,
+  prompt: string,
+  sourceMessageId:
+    string | null = null
+): Promise<SendMessageResponse> {
+
+  const payload:
+    GenerateImageRequest = {
+      chat_id:
+        chatId,
+
+      prompt,
+
+      source_message_id:
+        sourceMessageId,
+    };
+
+
+  const response =
+    await authenticatedFetch(
+      "/conversations/generate-image",
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            payload
+          ),
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   DELETE CHAT
+   ============================================================ */
 
 export async function deleteConversation(
   chatId: string
-) {
-  const response = await api.delete(
-    `/conversations/${chatId}`
-  );
+): Promise<{
+  success: boolean;
 
-  return response.data as {
-    success: boolean;
-    message: string;
-  };
+  message: string;
+}> {
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}`,
+      {
+        method:
+          "DELETE",
+      }
+    );
+
+
+  return response.json();
 }

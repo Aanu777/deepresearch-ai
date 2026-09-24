@@ -11,298 +11,734 @@ import {
 import {
   createConversation,
   deleteConversation,
+  editConversationMessage,
+  generateConversationImage,
   getConversation,
   getConversations,
   sendConversationMessage,
+  sendConversationMessageWithAttachments,
+  transcribeConversationAudio,
   type ConversationChat,
   type ConversationMessage,
 } from "@/lib/conversation";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
-// ============================================================
-// CONTEXT TYPE
-// ============================================================
+
+/* ============================================================
+   ACTIVITY
+   ============================================================ */
+
+export type ConversationActivity =
+  | "idle"
+  | "sending"
+  | "generating"
+  | "recording"
+  | "transcribing"
+  | "generating_image"
+  | "playing"
+  | "retrying"
+  | "error";
+
+
+/* ============================================================
+   CONTEXT TYPE
+   ============================================================ */
 
 type ConversationContextType = {
-  chat: ConversationChat | null;
-  messages: ConversationMessage[];
-  activeChatId: string | null;
+  chat:
+    ConversationChat | null;
 
-  chats: ConversationChat[];
+  messages:
+    ConversationMessage[];
 
-  loading: boolean;
-  historyLoading: boolean;
-  sending: boolean;
+  activeChatId:
+    string | null;
 
-  newChat: () => Promise<string | null>;
+  chats:
+    ConversationChat[];
+
+  loading:
+    boolean;
+
+  historyLoading:
+    boolean;
+
+  sending:
+    boolean;
+
+  activity:
+    ConversationActivity;
+
+  error:
+    string | null;
+
+  isBusy:
+    boolean;
+
+  selectedImageForEdit:
+    ConversationMessage | null;
+
+  setActivity: (
+    activity:
+      ConversationActivity
+  ) => void;
+
+  setConversationError: (
+    message:
+      string | null
+  ) => void;
+
+  clearConversationError:
+    () => void;
+
+  selectImageForEdit: (
+    message:
+      ConversationMessage
+  ) => void;
+
+  clearImageEdit:
+    () => void;
+
+  newChat:
+    () =>
+      Promise<
+        string | null
+      >;
 
   selectChat: (
-    chatId: string
-  ) => Promise<void>;
+    chatId:
+      string
+  ) =>
+    Promise<void>;
 
   sendMessage: (
-    content: string
-  ) => Promise<void>;
+    content:
+      string
+  ) =>
+    Promise<void>;
+
+  editMessage: (
+    messageId:
+      string,
+
+    content:
+      string
+  ) =>
+    Promise<void>;
+
+  sendMessageWithAttachments: (
+    content:
+      string,
+
+    files:
+      File[]
+  ) =>
+    Promise<void>;
+
+  transcribeAudio: (
+    audio:
+      Blob,
+
+    filename?:
+      string
+  ) =>
+    Promise<string>;
+
+  generateImage: (
+    prompt:
+      string,
+
+    sourceMessageId?:
+      string | null
+  ) =>
+    Promise<
+      ConversationMessage
+    >;
 
   deleteChat: (
-    chatId: string
-  ) => Promise<void>;
+    chatId:
+      string
+  ) =>
+    Promise<void>;
 
-  refreshChats: () => Promise<void>;
+  refreshChats:
+    () =>
+      Promise<void>;
 };
 
-// ============================================================
-// CONTEXT
-// ============================================================
+
+/* ============================================================
+   CONTEXT
+   ============================================================ */
 
 const ConversationContext =
-  createContext<ConversationContextType | null>(
+  createContext<
+    ConversationContextType | null
+  >(
     null
   );
 
-// ============================================================
-// PROVIDER
-// ============================================================
+
+/* ============================================================
+   PROVIDER
+   ============================================================ */
 
 export function ConversationProvider({
   children,
 }: {
-  children: ReactNode;
+  children:
+    ReactNode;
 }) {
-  // ==========================================================
-  // SUPABASE
-  // ==========================================================
 
-  const supabase = createClient();
+  /* ==========================================================
+     SUPABASE
+     ========================================================== */
 
-  // ==========================================================
-  // AUTHENTICATION
-  // ==========================================================
+  const supabase =
+    createClient();
 
-  const [authenticated, setAuthenticated] =
-    useState(false);
 
-  const [authInitialized, setAuthInitialized] =
-    useState(false);
+  /* ==========================================================
+     AUTH
+     ========================================================== */
 
-  // ==========================================================
-  // STATE
-  // ==========================================================
+  const [
+    authenticated,
+    setAuthenticated,
+  ] =
+    useState(
+      false
+    );
 
-  const [chat, setChat] =
-    useState<ConversationChat | null>(
+  const [
+    authInitialized,
+    setAuthInitialized,
+  ] =
+    useState(
+      false
+    );
+
+
+  /* ==========================================================
+     CHAT STATE
+     ========================================================== */
+
+  const [
+    chat,
+    setChat,
+  ] =
+    useState<
+      ConversationChat | null
+    >(
       null
     );
 
-  const [messages, setMessages] =
-    useState<ConversationMessage[]>(
+  const [
+    messages,
+    setMessages,
+  ] =
+    useState<
+      ConversationMessage[]
+    >(
       []
     );
 
-  const [chats, setChats] =
-    useState<ConversationChat[]>(
+  const [
+    chats,
+    setChats,
+  ] =
+    useState<
+      ConversationChat[]
+    >(
       []
     );
 
-  const [activeChatId, setActiveChatId] =
-    useState<string | null>(
+  const [
+    activeChatId,
+    setActiveChatId,
+  ] =
+    useState<
+      string | null
+    >(
       null
     );
 
-  const [loading, setLoading] =
-    useState(false);
 
-  const [historyLoading, setHistoryLoading] =
-    useState(false);
+  /* ==========================================================
+     UI STATE
+     ========================================================== */
 
-  const [sending, setSending] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] =
+    useState(
+      false
+    );
 
-  // ==========================================================
-  // AUTHENTICATION STATE
-  // ==========================================================
+  const [
+    historyLoading,
+    setHistoryLoading,
+  ] =
+    useState(
+      false
+    );
 
-  useEffect(() => {
-    let mounted = true;
+  const [
+    sending,
+    setSending,
+  ] =
+    useState(
+      false
+    );
 
-    async function initializeAuth() {
-      try {
-        const {
-          data: { session },
-        } =
-          await supabase.auth.getSession();
+  const [
+    activity,
+    setActivity,
+  ] =
+    useState<
+      ConversationActivity
+    >(
+      "idle"
+    );
 
-        if (!mounted) {
-          return;
-        }
+  const [
+    error,
+    setError,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
 
-        setAuthenticated(
-          Boolean(session)
-        );
 
-        setAuthInitialized(true);
-      } catch (error) {
-        console.error(
-          "Failed to initialize authentication:",
-          error
-        );
+  /* ==========================================================
+     IMAGE EDITING
+     ========================================================== */
 
-        if (mounted) {
-          setAuthenticated(false);
-          setAuthInitialized(true);
-        }
-      }
-    }
+  const [
+    selectedImageForEdit,
+    setSelectedImageForEdit,
+  ] =
+    useState<
+      ConversationMessage | null
+    >(
+      null
+    );
 
-    initializeAuth();
 
-    const {
-      data: { subscription },
-    } =
-      supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          if (!mounted) {
+  /* ==========================================================
+     DERIVED
+     ========================================================== */
+
+  const isBusy =
+    sending ||
+    [
+      "sending",
+      "generating",
+      "transcribing",
+      "generating_image",
+      "retrying",
+    ].includes(
+      activity
+    );
+
+
+  /* ==========================================================
+     AUTH INITIALIZATION
+     ========================================================== */
+
+  useEffect(
+    () => {
+      let mounted =
+        true;
+
+
+      async function initializeAuth() {
+        try {
+          const {
+            data: {
+              session,
+            },
+          } =
+            await supabase
+              .auth
+              .getSession();
+
+
+          if (
+            !mounted
+          ) {
             return;
           }
 
-          const isAuthenticated =
-            Boolean(session);
 
           setAuthenticated(
-            isAuthenticated
+            Boolean(
+              session
+            )
           );
 
-          // ----------------------------------------------------
-          // LOGGED OUT
-          // ----------------------------------------------------
+          setAuthInitialized(
+            true
+          );
 
-          if (!isAuthenticated) {
-            setChats([]);
+        } catch (
+          caught
+        ) {
+          console.error(
+            "Failed to initialize authentication:",
+            caught
+          );
 
-            setChat(null);
 
-            setMessages([]);
+          if (
+            mounted
+          ) {
+            setAuthenticated(
+              false
+            );
 
-            setActiveChatId(null);
-
-            setLoading(false);
-
-            setHistoryLoading(false);
-
-            setSending(false);
-
-            return;
+            setAuthInitialized(
+              true
+            );
           }
-
-          // ----------------------------------------------------
-          // LOGGED IN
-          //
-          // History loading is handled by the authenticated
-          // effect below.
-          // ----------------------------------------------------
         }
+      }
+
+
+      initializeAuth();
+
+
+      const {
+        data: {
+          subscription,
+        },
+      } =
+        supabase
+          .auth
+          .onAuthStateChange(
+            (
+              _event,
+              session
+            ) => {
+
+              if (
+                !mounted
+              ) {
+                return;
+              }
+
+
+              const loggedIn =
+                Boolean(
+                  session
+                );
+
+
+              setAuthenticated(
+                loggedIn
+              );
+
+
+              if (
+                !loggedIn
+              ) {
+                setChats(
+                  []
+                );
+
+                setChat(
+                  null
+                );
+
+                setMessages(
+                  []
+                );
+
+                setActiveChatId(
+                  null
+                );
+
+                setSelectedImageForEdit(
+                  null
+                );
+
+                setLoading(
+                  false
+                );
+
+                setHistoryLoading(
+                  false
+                );
+
+                setSending(
+                  false
+                );
+
+                setError(
+                  null
+                );
+
+                setActivity(
+                  "idle"
+                );
+              }
+            }
+          );
+
+
+      return () => {
+        mounted =
+          false;
+
+        subscription
+          .unsubscribe();
+      };
+    },
+    []
+  );
+
+
+  /* ==========================================================
+     ERROR
+     ========================================================== */
+
+  function clearConversationError() {
+    setError(
+      null
+    );
+
+
+    if (
+      activity ===
+      "error"
+    ) {
+      setActivity(
+        "idle"
+      );
+    }
+  }
+
+
+  function setConversationError(
+    message:
+      string | null
+  ) {
+    setError(
+      message
+    );
+
+
+    if (
+      message
+    ) {
+      setActivity(
+        "error"
       );
 
-    return () => {
-      mounted = false;
-
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // ==========================================================
-  // REFRESH CHAT HISTORY
-  // ==========================================================
-
-  async function refreshChats() {
-    // IMPORTANT:
-    // Never call the protected conversations endpoint
-    // without an authenticated Supabase session.
-
-    if (!authenticated) {
-      setChats([]);
-      setHistoryLoading(false);
       return;
     }
 
-    setHistoryLoading(true);
+
+    if (
+      activity ===
+      "error"
+    ) {
+      setActivity(
+        "idle"
+      );
+    }
+  }
+
+
+  /* ==========================================================
+     IMAGE SELECTION
+     ========================================================== */
+
+  function selectImageForEdit(
+    message:
+      ConversationMessage
+  ) {
+    if (
+      message.message_type !==
+      "image"
+    ) {
+      return;
+    }
+
+
+    if (
+      !message.image_url
+    ) {
+      return;
+    }
+
+
+    clearConversationError();
+
+
+    setSelectedImageForEdit(
+      message
+    );
+  }
+
+
+  function clearImageEdit() {
+    setSelectedImageForEdit(
+      null
+    );
+  }
+
+
+  /* ==========================================================
+     CHAT HISTORY
+     ========================================================== */
+
+  async function refreshChats() {
+    if (
+      !authenticated
+    ) {
+      setChats(
+        []
+      );
+
+      setHistoryLoading(
+        false
+      );
+
+      return;
+    }
+
+
+    setHistoryLoading(
+      true
+    );
+
 
     try {
       const response =
         await getConversations();
 
-      const sortedChats =
-        [...response.chats].sort(
-          (a, b) =>
+
+      const sorted =
+        [
+          ...response.chats,
+        ].sort(
+          (
+            first,
+            second
+          ) =>
             new Date(
-              b.updated_at
-            ).getTime() -
+              second.updated_at
+            ).getTime()
+            -
             new Date(
-              a.updated_at
+              first.updated_at
             ).getTime()
         );
 
+
       setChats(
-        sortedChats
+        sorted
       );
-    } catch (error) {
+
+    } catch (
+      caught
+    ) {
       console.error(
         "Failed to load conversations:",
-        error
+        caught
       );
+
     } finally {
-      setHistoryLoading(false);
+      setHistoryLoading(
+        false
+      );
     }
   }
 
-  // ==========================================================
-  // LOAD HISTORY AFTER AUTHENTICATION
-  // ==========================================================
 
-  useEffect(() => {
-    if (!authInitialized) {
-      return;
-    }
+  /* ==========================================================
+     LOAD HISTORY
+     ========================================================== */
 
-    if (!authenticated) {
-      return;
-    }
+  useEffect(
+    () => {
+      if (
+        !authInitialized
+      ) {
+        return;
+      }
 
-    refreshChats();
-  }, [
-    authInitialized,
-    authenticated,
-  ]);
 
-  // ==========================================================
-  // SELECT EXISTING CHAT
-  // ==========================================================
+      if (
+        !authenticated
+      ) {
+        return;
+      }
+
+
+      refreshChats();
+    },
+    [
+      authInitialized,
+      authenticated,
+    ]
+  );
+
+
+  /* ==========================================================
+     SELECT CHAT
+     ========================================================== */
 
   async function selectChat(
-    chatId: string
+    chatId:
+      string
   ) {
-    if (!chatId) {
-      return;
-    }
-
-    if (!authenticated) {
-      return;
-    }
-
     if (
-      activeChatId === chatId
+      !chatId ||
+      !authenticated
     ) {
       return;
     }
 
-    setLoading(true);
+
+    if (
+      activeChatId ===
+      chatId
+    ) {
+      return;
+    }
+
+
+    setLoading(
+      true
+    );
+
+    setError(
+      null
+    );
+
+    setActivity(
+      "idle"
+    );
+
+    setSelectedImageForEdit(
+      null
+    );
+
 
     try {
       const response =
         await getConversation(
           chatId
         );
+
 
       setChat(
         response.chat
@@ -315,213 +751,878 @@ export function ConversationProvider({
       setActiveChatId(
         chatId
       );
-    } catch (error) {
+
+    } catch (
+      caught
+    ) {
       console.error(
         "Failed to load conversation:",
-        error
+        caught
       );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Failed to load conversation."
+        )
+      );
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
-  // ==========================================================
-  // NEW CHAT
-  // ==========================================================
 
-  async function newChat(): Promise<string | null> {
-    if (!authenticated) {
+  /* ==========================================================
+     NEW CHAT
+     ========================================================== */
+
+  async function newChat():
+    Promise<
+      string | null
+    > {
+
+    if (
+      !authenticated
+    ) {
       return null;
     }
 
-    setLoading(true);
+
+    setLoading(
+      true
+    );
+
+    setError(
+      null
+    );
+
+    setSelectedImageForEdit(
+      null
+    );
+
 
     try {
-      const newConversation =
+      const created =
         await createConversation();
 
+
       setChat(
-        newConversation
+        created
       );
 
-      setMessages([]);
+      setMessages(
+        []
+      );
 
       setActiveChatId(
-        newConversation.chat_id
+        created.chat_id
       );
 
+
       setChats(
-        (previous) => [
-          newConversation,
+        (
+          previous
+        ) => [
+          created,
+
           ...previous.filter(
-            (item) =>
+            (
+              item
+            ) =>
               item.chat_id !==
-              newConversation.chat_id
+              created.chat_id
           ),
         ]
       );
 
-      return newConversation.chat_id;
-    } catch (error) {
-      console.error(
-        "Failed to create conversation:",
-        error
+
+      return (
+        created.chat_id
       );
 
+    } catch (
+      caught
+    ) {
+      console.error(
+        "Failed to create conversation:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Failed to create conversation."
+        )
+      );
+
+
       return null;
+
     } finally {
-      setLoading(false);
+      setLoading(
+        false
+      );
     }
   }
 
-  // ==========================================================
-  // SEND MESSAGE
-  // ==========================================================
+
+  /* ==========================================================
+     ENSURE CHAT
+     ========================================================== */
+
+  async function ensureChat():
+    Promise<string> {
+
+    if (
+      activeChatId
+    ) {
+      return (
+        activeChatId
+      );
+    }
+
+
+    const chatId =
+      await newChat();
+
+
+    if (
+      !chatId
+    ) {
+      throw new Error(
+        "Failed to create conversation."
+      );
+    }
+
+
+    return (
+      chatId
+    );
+  }
+
+
+  /* ==========================================================
+     APPLY NORMAL RESPONSE
+     ========================================================== */
+
+  function applyMessageResponse(
+    response: {
+      chat:
+        ConversationChat;
+
+      user_message:
+        ConversationMessage;
+
+      assistant_message:
+        ConversationMessage;
+    }
+  ) {
+
+    setMessages(
+      (
+        previous
+      ) => [
+        ...previous,
+
+        response
+          .user_message,
+
+        response
+          .assistant_message,
+      ]
+    );
+
+
+    setChat(
+      response.chat
+    );
+
+
+    moveChatToTop(
+      response.chat
+    );
+  }
+
+
+  /* ==========================================================
+     SIDEBAR UPDATE
+     ========================================================== */
+
+  function moveChatToTop(
+    updatedChat:
+      ConversationChat
+  ) {
+
+    setChats(
+      (
+        previous
+      ) => [
+        updatedChat,
+
+        ...previous.filter(
+          (
+            item
+          ) =>
+            item.chat_id !==
+            updatedChat
+              .chat_id
+        ),
+      ]
+    );
+  }
+
+
+  /* ==========================================================
+     SEND TEXT MESSAGE
+     ========================================================== */
 
   async function sendMessage(
-    content: string
+    content:
+      string
   ) {
+
     const trimmed =
       content.trim();
 
-    if (!trimmed) {
+
+    if (
+      !trimmed ||
+      sending
+    ) {
       return;
     }
 
-    if (!authenticated) {
+
+    if (
+      !authenticated
+    ) {
       throw new Error(
         "You must be signed in to send a message."
       );
     }
 
-    let chatId =
-      activeChatId;
 
-    // --------------------------------------------------------
-    // Create conversation automatically if none exists
-    // --------------------------------------------------------
+    const chatId =
+      await ensureChat();
 
-    if (!chatId) {
-      chatId =
-        await newChat();
 
-      if (!chatId) {
-        throw new Error(
-          "Failed to create conversation."
-        );
-      }
-    }
+    setSending(
+      true
+    );
 
-    setSending(true);
+    setError(
+      null
+    );
+
+    setActivity(
+      "sending"
+    );
+
 
     try {
+      setActivity(
+        "generating"
+      );
+
+
       const response =
         await sendConversationMessage(
           chatId,
           trimmed
         );
 
-      // ------------------------------------------------------
-      // Add both messages
-      // ------------------------------------------------------
 
-      setMessages(
-        (previous) => [
-          ...previous,
-          response.user_message,
-          response.assistant_message,
-        ]
+      applyMessageResponse(
+        response
       );
 
-      // ------------------------------------------------------
-      // Update current chat
-      // ------------------------------------------------------
+
+      setActivity(
+        "idle"
+      );
+
+    } catch (
+      caught
+    ) {
+      console.error(
+        "Failed to send conversation message:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Message could not be sent."
+        )
+      );
+
+
+      throw caught;
+
+    } finally {
+      setSending(
+        false
+      );
+    }
+  }
+
+
+  /* ==========================================================
+     EDIT USER TEXT MESSAGE
+     ========================================================== */
+
+  async function editMessage(
+    messageId:
+      string,
+
+    content:
+      string
+  ) {
+
+    const trimmed =
+      content.trim();
+
+
+    if (
+      !trimmed
+    ) {
+      return;
+    }
+
+
+    if (
+      !authenticated
+    ) {
+      throw new Error(
+        "You must be signed in to edit a message."
+      );
+    }
+
+
+    if (
+      !activeChatId
+    ) {
+      throw new Error(
+        "No active conversation."
+      );
+    }
+
+
+    if (
+      sending
+    ) {
+      return;
+    }
+
+
+    setSending(
+      true
+    );
+
+    setError(
+      null
+    );
+
+    setActivity(
+      "retrying"
+    );
+
+
+    try {
+      const response =
+        await editConversationMessage(
+          activeChatId,
+          messageId,
+          trimmed
+        );
+
+
+      /*
+       * IMPORTANT:
+       *
+       * Editing an old user message causes the
+       * backend to remove the branch after it and
+       * regenerate the assistant response.
+       *
+       * Therefore we replace the WHOLE local message
+       * array instead of trying to patch one bubble.
+       */
+
+      setMessages(
+        response.messages
+      );
+
 
       setChat(
         response.chat
       );
 
-      // ------------------------------------------------------
-      // Update sidebar
-      // ------------------------------------------------------
 
-      setChats(
-        (previous) => {
-          const withoutCurrent =
-            previous.filter(
-              (item) =>
-                item.chat_id !==
-                response.chat.chat_id
-            );
+      moveChatToTop(
+        response.chat
+      );
 
-          return [
-            response.chat,
-            ...withoutCurrent,
-          ];
+
+      /*
+       * If the selected image belonged to a branch
+       * that was removed by the text edit, clear it.
+       */
+
+      setSelectedImageForEdit(
+        (
+          current
+        ) => {
+
+          if (
+            !current
+          ) {
+            return null;
+          }
+
+
+          const stillExists =
+            response.messages
+              .some(
+                (
+                  message
+                ) =>
+                  message.message_id ===
+                  current.message_id
+              );
+
+
+          return (
+            stillExists
+              ? current
+              : null
+          );
         }
       );
-    } catch (error) {
-      console.error(
-        "Failed to send conversation message:",
-        error
+
+
+      setActivity(
+        "idle"
       );
 
-      throw error;
+    } catch (
+      caught
+    ) {
+      console.error(
+        "Failed to edit conversation message:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Message could not be edited."
+        )
+      );
+
+
+      throw caught;
+
     } finally {
-      setSending(false);
+      setSending(
+        false
+      );
     }
   }
 
-  // ==========================================================
-  // DELETE
-  // ==========================================================
 
-  async function deleteChat(
-    chatId: string
+  /* ==========================================================
+     ATTACHMENT MESSAGE
+     ========================================================== */
+
+  async function sendMessageWithAttachments(
+    content:
+      string,
+
+    files:
+      File[]
   ) {
-    if (!authenticated) {
+
+    if (
+      files.length ===
+      0
+    ) {
+      await sendMessage(
+        content
+      );
+
       return;
     }
+
+
+    if (
+      sending
+    ) {
+      return;
+    }
+
+
+    if (
+      !authenticated
+    ) {
+      throw new Error(
+        "You must be signed in to send attachments."
+      );
+    }
+
+
+    const chatId =
+      await ensureChat();
+
+
+    setSending(
+      true
+    );
+
+    setError(
+      null
+    );
+
+    setActivity(
+      "sending"
+    );
+
+
+    try {
+      setActivity(
+        "generating"
+      );
+
+
+      const response =
+        await sendConversationMessageWithAttachments(
+          chatId,
+          content,
+          files
+        );
+
+
+      applyMessageResponse(
+        response
+      );
+
+
+      setActivity(
+        "idle"
+      );
+
+    } catch (
+      caught
+    ) {
+      console.error(
+        "Attachment message failed:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "The attachment could not be processed."
+        )
+      );
+
+
+      throw caught;
+
+    } finally {
+      setSending(
+        false
+      );
+    }
+  }
+
+
+  /* ==========================================================
+     TRANSCRIBE AUDIO
+     ========================================================== */
+
+  async function transcribeAudio(
+    audio:
+      Blob,
+
+    filename?:
+      string
+  ) {
+
+    setError(
+      null
+    );
+
+    setActivity(
+      "transcribing"
+    );
+
+
+    try {
+      const response =
+        await transcribeConversationAudio(
+          audio,
+          filename
+        );
+
+
+      setActivity(
+        "idle"
+      );
+
+
+      return (
+        response.text
+      );
+
+    } catch (
+      caught
+    ) {
+      console.error(
+        "Transcription failed:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Audio transcription failed."
+        )
+      );
+
+
+      throw caught;
+    }
+  }
+
+
+  /* ==========================================================
+     GENERATE / EDIT IMAGE
+     ========================================================== */
+
+  async function generateImage(
+    prompt:
+      string,
+
+    sourceMessageId:
+      string | null = null
+  ):
+    Promise<
+      ConversationMessage
+    > {
+
+    const trimmed =
+      prompt.trim();
+
+
+    if (
+      !trimmed
+    ) {
+      throw new Error(
+        "Image prompt cannot be empty."
+      );
+    }
+
+
+    if (
+      !authenticated
+    ) {
+      throw new Error(
+        "You must be signed in to generate an image."
+      );
+    }
+
+
+    const chatId =
+      await ensureChat();
+
+
+    setError(
+      null
+    );
+
+    setActivity(
+      "generating_image"
+    );
+
+
+    try {
+      const response =
+        await generateConversationImage(
+          chatId,
+          trimmed,
+          sourceMessageId
+        );
+
+
+      /*
+       * Generated images now behave exactly like
+       * assistant messages.
+       */
+
+      applyMessageResponse(
+        response
+      );
+
+
+      /*
+       * The latest generated/edited image becomes
+       * the active image source.
+       *
+       * This makes consecutive image editing easy:
+       *
+       * A → B → C → D
+       */
+
+      if (
+        response
+          .assistant_message
+          .message_type ===
+        "image"
+      ) {
+
+        setSelectedImageForEdit(
+          response
+            .assistant_message
+        );
+      }
+
+
+      setActivity(
+        "idle"
+      );
+
+
+      return (
+        response
+          .assistant_message
+      );
+
+    } catch (
+      caught
+    ) {
+      console.error(
+        sourceMessageId
+          ? "Image editing failed:"
+          : "Image generation failed:",
+        caught
+      );
+
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          sourceMessageId
+            ? "Image editing failed."
+            : "Image generation failed."
+        )
+      );
+
+
+      throw caught;
+    }
+  }
+
+
+  /* ==========================================================
+     DELETE CHAT
+     ========================================================== */
+
+  async function deleteChat(
+    chatId:
+      string
+  ) {
+
+    if (
+      !authenticated
+    ) {
+      return;
+    }
+
 
     try {
       await deleteConversation(
         chatId
       );
 
+
       setChats(
-        (previous) =>
+        (
+          previous
+        ) =>
           previous.filter(
-            (item) =>
+            (
+              item
+            ) =>
               item.chat_id !==
               chatId
           )
       );
 
+
       if (
         activeChatId ===
         chatId
       ) {
-        setChat(null);
 
-        setMessages([]);
+        setChat(
+          null
+        );
+
+        setMessages(
+          []
+        );
 
         setActiveChatId(
           null
         );
+
+        setSelectedImageForEdit(
+          null
+        );
+
+        setError(
+          null
+        );
+
+        setActivity(
+          "idle"
+        );
       }
-    } catch (error) {
+
+    } catch (
+      caught
+    ) {
       console.error(
         "Failed to delete conversation:",
-        error
+        caught
       );
 
-      throw error;
+
+      setConversationError(
+        getErrorMessage(
+          caught,
+          "Failed to delete conversation."
+        )
+      );
+
+
+      throw caught;
     }
   }
 
-  // ==========================================================
-  // PROVIDER
-  // ==========================================================
+
+  /* ==========================================================
+     PROVIDER
+     ========================================================== */
 
   return (
     <ConversationContext.Provider
@@ -540,11 +1641,37 @@ export function ConversationProvider({
 
         sending,
 
+        activity,
+
+        error,
+
+        isBusy,
+
+        selectedImageForEdit,
+
+        setActivity,
+
+        setConversationError,
+
+        clearConversationError,
+
+        selectImageForEdit,
+
+        clearImageEdit,
+
         newChat,
 
         selectChat,
 
         sendMessage,
+
+        editMessage,
+
+        sendMessageWithAttachments,
+
+        transcribeAudio,
+
+        generateImage,
 
         deleteChat,
 
@@ -556,23 +1683,62 @@ export function ConversationProvider({
   );
 }
 
-// ============================================================
-// HOOK
-// ============================================================
+
+/* ============================================================
+   HOOK
+   ============================================================ */
 
 export function useConversation() {
+
   const context =
     useContext(
       ConversationContext
     );
 
-  if (!context) {
+
+  if (
+    !context
+  ) {
     throw new Error(
       "useConversation must be used inside ConversationProvider"
     );
   }
 
+
   return context;
 }
 
-export type { ConversationChat, ConversationMessage };
+
+/* ============================================================
+   ERROR HELPER
+   ============================================================ */
+
+function getErrorMessage(
+  error:
+    unknown,
+
+  fallback:
+    string
+) {
+
+  if (
+    error instanceof
+      Error &&
+    error.message
+  ) {
+    return (
+      error.message
+    );
+  }
+
+
+  return (
+    fallback
+  );
+}
+
+
+export type {
+  ConversationChat,
+  ConversationMessage,
+};
