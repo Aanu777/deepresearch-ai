@@ -2,6 +2,7 @@
 
 import {
   FormEvent,
+  Suspense,
   useEffect,
   useState,
 } from "react";
@@ -31,7 +32,7 @@ import {
   Spinner,
 } from "@/components/ui";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router =
     useRouter();
 
@@ -659,5 +660,38 @@ export default function ResetPasswordPage() {
         </Button>
       </form>
     </AuthShell>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthShell
+          title="Reset password"
+          subtitle="Loading your reset session."
+        >
+          <div
+            className="
+              flex
+              items-center
+              justify-center
+              gap-2
+              py-8
+              text-sm
+              text-white/35
+            "
+          >
+            <Spinner
+              size={16}
+            />
+
+            Loading...
+          </div>
+        </AuthShell>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   );
 }
