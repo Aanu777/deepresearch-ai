@@ -65,7 +65,7 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: str
 
-    SUPABASE_PUBLISHABLE_KEY: str
+    SUPABASE_PUBLISHABLE_KEY: str = ""
 
     # ========================================================
     # LONG-TERM SEMANTIC MEMORY
