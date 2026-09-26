@@ -512,6 +512,76 @@ Limit to at most 4 memories.
                 "Semantic memory learning failed."
             )
 
+    async def learn_from_correction(
+        self,
+        *,
+        user_id: str,
+        access_token: str,
+        correction: str,
+        source_id: str,
+        source_message_id: str,
+        context: str | None = None,
+    ) -> None:
+
+        if not settings.MEMORY_ENABLED:
+            return
+
+        text = correction.strip()
+
+        if (
+            len(text) < 4
+            or len(text) > 4000
+            or self._looks_sensitive(
+                text
+            )
+        ):
+            return
+
+        embedding_text = text
+
+        if (
+            context
+            and not self._looks_sensitive(
+                context
+            )
+        ):
+            embedding_text = (
+                context.strip()[:1200]
+                + "\n"
+                + text
+            )
+
+        try:
+            await self._store_candidate(
+                user_id=user_id,
+                access_token=access_token,
+                candidate={
+                    "kind":
+                        "correction",
+
+                    "content":
+                        text,
+
+                    "embedding_text":
+                        embedding_text,
+
+                    "confidence":
+                        0.99,
+
+                    "importance":
+                        0.95,
+                },
+                source_id=source_id,
+                source_message_id=(
+                    source_message_id
+                ),
+            )
+
+        except Exception:
+            logger.exception(
+                "Explicit correction learning failed."
+            )
+
     # ========================================================
     # PARSING / FILTERING
     # ========================================================
@@ -833,8 +903,15 @@ Limit to at most 4 memories.
             return
 
         try:
+            embedding_text = str(
+                candidate.get(
+                    "embedding_text",
+                    content,
+                )
+            ).strip()
+
             embedding = await self._embed(
-                content
+                embedding_text
             )
 
             async with httpx.AsyncClient(
