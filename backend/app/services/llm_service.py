@@ -501,6 +501,7 @@ class LLMService:
 
     @classmethod
     def _normalize_content(
+        cls,
         content: Any,
     ) -> str:
 
