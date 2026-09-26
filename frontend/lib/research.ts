@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { secureFetch } from "@/lib/secure-transport";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -67,7 +68,7 @@ export async function createResearch(
     await getAuthHeaders();
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_BASE}/research/`,
       {
         method: "POST",
@@ -102,7 +103,7 @@ export async function sendResearchQuestion(
     await getAuthHeaders();
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_BASE}/research/${encodeURIComponent(
         chatId
       )}/question`,
@@ -145,7 +146,7 @@ export async function cancelResearch(
     await getAuthHeaders();
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_BASE}/research/${encodeURIComponent(
         jobId
       )}/cancel`,
@@ -181,7 +182,7 @@ export async function getResearch(
     await getAuthHeaders();
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_BASE}/research/${encodeURIComponent(
         jobId
       )}`,
@@ -215,7 +216,7 @@ export async function getResearchHistory() {
     await getAuthHeaders();
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_BASE}/research/`,
       {
         method: "GET",
