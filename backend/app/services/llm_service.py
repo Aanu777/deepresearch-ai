@@ -635,7 +635,7 @@ class LLMService:
                 r"(?P<path>.+?)"
                 r"(?P=quote)\s*,\s*"
                 r"content=(?P<cquote>['\"])"
-                r"(?P<content>.*?)"
+                r"(?P<content>.*)"
                 r"(?P=cquote)\s*\)"
                 r"\]?\s*"
                 r"(?:<\|tool_call_end\|>)?"
@@ -648,17 +648,112 @@ class LLMService:
         )
 
         if match is None:
-            return (
-                text
-                .replace(
-                    "<|tool_call_start|>",
-                    ""
+            header = re.search(
+                (
+                    r"(?:<\|tool_call_start\|>\s*)?"
+                    r"\[?write\("
+                    r"path=(?P<quote>['\"])"
+                    r"(?P<path>.+?)"
+                    r"(?P=quote)\s*,\s*"
+                    r"content=(?P<cquote>['\"])"
+                ),
+                text,
+                flags=re.DOTALL,
+            )
+
+            if header is None:
+                return (
+                    text
+                    .replace(
+                        "<|tool_call_start|>",
+                        ""
+                    )
+                    .replace(
+                        "<|tool_call_end|>",
+                        ""
+                    )
+                    .strip()
                 )
-                .replace(
-                    "<|tool_call_end|>",
-                    ""
+
+            before = (
+                text[
+                    :header.start()
+                ]
+                .strip()
+            )
+
+            path = (
+                header
+                .group(
+                    "path"
                 )
                 .strip()
+            )
+
+            raw_content = (
+                text[
+                    header.end():
+                ]
+            )
+
+            raw_content = re.sub(
+                (
+                    r"\s*['\"]?\)?\]?\s*"
+                    r"(?:<\|tool_call_end\|>)?\s*$"
+                ),
+                "",
+                raw_content,
+                flags=re.DOTALL,
+            )
+
+            decoded_content = (
+                raw_content
+                .replace(
+                    "\\r\\n",
+                    "\n"
+                )
+                .replace(
+                    "\\n",
+                    "\n"
+                )
+                .replace(
+                    "\\t",
+                    "\t"
+                )
+                .replace(
+                    "\\\"",
+                    "\""
+                )
+                .replace(
+                    "\\'",
+                    "'"
+                )
+            )
+
+            language = (
+                cls
+                ._normalize_language_from_path(
+                    path
+                )
+            )
+
+            code_block = (
+                f"**{path}**\n\n"
+                f"```{language}\n"
+                f"{decoded_content.rstrip()}\n"
+                f"```"
+            )
+
+            return (
+                "\n\n".join(
+                    part
+                    for part
+                    in [
+                        before,
+                        code_block,
+                    ]
+                    if part
+                )
             )
 
         before = (
