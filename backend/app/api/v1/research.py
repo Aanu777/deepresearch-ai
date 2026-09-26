@@ -7,12 +7,17 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
 )
 
 from app.core.auth import (
     AuthenticatedUser,
     get_current_user,
+)
+
+from app.core.payload_crypto import (
+    decrypt_form_value,
 )
 
 from app.schemas.research import (
@@ -39,6 +44,7 @@ router = APIRouter()
 )
 async def create_research_job(
     background_tasks: BackgroundTasks,
+    request: Request,
 
     query: str = Form(default=""),
 
@@ -51,7 +57,11 @@ async def create_research_job(
     ),
 ):
     query = (
-        query or ""
+        decrypt_form_value(
+            query or "",
+            request,
+            "query",
+        )
     ).strip()
 
     pdf_filename: str | None = None
