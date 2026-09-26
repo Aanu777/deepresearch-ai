@@ -512,6 +512,39 @@ Limit to at most 4 memories.
                 "Semantic memory learning failed."
             )
 
+    async def remove_corrections_for_source(
+        self,
+        *,
+        access_token: str,
+        source_message_id: str,
+    ) -> None:
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=6.0
+            ) as client:
+
+                response = await client.delete(
+                    (
+                        self._rest_base
+                        + "/user_memories"
+                        + "?source_message_id=eq."
+                        + source_message_id
+                        + "&kind=eq.correction"
+                    ),
+                    headers=self._headers(
+                        access_token,
+                        prefer="return=minimal",
+                    ),
+                )
+
+            response.raise_for_status()
+
+        except Exception:
+            logger.exception(
+                "Failed to remove source correction memory."
+            )
+
     async def learn_from_correction(
         self,
         *,
