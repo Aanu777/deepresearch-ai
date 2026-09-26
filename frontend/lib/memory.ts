@@ -2,21 +2,6 @@ import {
   createClient,
 } from "@/lib/supabase/client";
 
-import {
-  secureFetch,
-} from "@/lib/secure-transport";
-
-
-const API_URL =
-  (
-    process.env
-      .NEXT_PUBLIC_API_URL ??
-    "http://127.0.0.1:8000/api/v1"
-  ).replace(
-    /\/$/,
-    ""
-  );
-
 
 export type UserMemory = {
   id: string;
@@ -39,10 +24,9 @@ export type UserMemory = {
 };
 
 
-async function authenticatedFetch(
-  path: string,
-  options: RequestInit = {}
-) {
+export async function getMemories():
+  Promise<UserMemory[]> {
+
   const supabase =
     createClient();
 
@@ -50,8 +34,43 @@ async function authenticatedFetch(
     data,
     error,
   } =
-    await supabase.auth
-      .getSession();
+    await supabase
+      .from(
+        "user_memories"
+      )
+      .select(
+        [
+          "id",
+          "kind",
+          "content",
+          "confidence",
+          "importance",
+          "source_type",
+          "created_at",
+          "updated_at",
+        ].join(",")
+      )
+      .eq(
+        "is_active",
+        true
+      )
+      .order(
+        "importance",
+        {
+          ascending:
+            false,
+        }
+      )
+      .order(
+        "updated_at",
+        {
+          ascending:
+            false,
+        }
+      )
+      .limit(
+        200
+      );
 
   if (error) {
     throw new Error(
@@ -59,110 +78,60 @@ async function authenticatedFetch(
     );
   }
 
-  const accessToken =
-    data.session
-      ?.access_token;
-
-  if (!accessToken) {
-    throw new Error(
-      "You are not signed in."
-    );
-  }
-
-  const headers =
-    new Headers(
-      options.headers
-    );
-
-  headers.set(
-    "Authorization",
-    `Bearer ${accessToken}`
-  );
-
-  const response =
-    await secureFetch(
-      `${API_URL}/memory${path}`,
-      {
-        ...options,
-        headers,
-        cache: "no-store",
-      }
-    );
-
-  if (!response.ok) {
-    throw new Error(
-      await readApiError(
-        response
-      )
-    );
-  }
-
-  return response;
-}
-
-
-async function readApiError(
-  response: Response
-) {
-  try {
-    const data =
-      await response.json();
-
-    if (
-      typeof data?.detail ===
-      "string"
-    ) {
-      return data.detail;
-    }
-
-  } catch {
-    // Fall through to generic message.
-  }
-
   return (
-    `Memory request failed (${response.status}).`
-  );
-}
-
-
-export async function getMemories():
-  Promise<UserMemory[]> {
-
-  const response =
-    await authenticatedFetch(
-      "/"
-    );
-
-  const data =
-    await response.json();
-
-  return Array.isArray(
-    data?.memories
-  )
-    ? data.memories
-    : [];
+    data ??
+    []
+  ) as UserMemory[];
 }
 
 
 export async function deleteMemory(
   memoryId: string
 ) {
-  await authenticatedFetch(
-    `/${encodeURIComponent(
-      memoryId
-    )}`,
-    {
-      method: "DELETE",
-    }
-  );
+  const supabase =
+    createClient();
+
+  const {
+    error,
+  } =
+    await supabase
+      .from(
+        "user_memories"
+      )
+      .delete()
+      .eq(
+        "id",
+        memoryId
+      );
+
+  if (error) {
+    throw new Error(
+      error.message
+    );
+  }
 }
 
 
 export async function clearMemories() {
-  await authenticatedFetch(
-    "/",
-    {
-      method: "DELETE",
-    }
-  );
+  const supabase =
+    createClient();
+
+  const {
+    error,
+  } =
+    await supabase
+      .from(
+        "user_memories"
+      )
+      .delete()
+      .eq(
+        "is_active",
+        true
+      );
+
+  if (error) {
+    throw new Error(
+      error.message
+    );
+  }
 }
