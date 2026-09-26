@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.middleware.payload_encryption import (
+    PayloadEncryptionMiddleware,
+)
 
 from app.api.v1.research import router as research_router
 from app.api.v1.conversations import router as conversations_router
@@ -31,12 +34,21 @@ cors_origins = [
 
 
 app.add_middleware(
+    PayloadEncryptionMiddleware,
+)
+
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_origin_regex=settings.CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=[
+        "X-DR-Encrypted-Response",
+        "X-DR-Original-Content-Type",
+    ],
 )
 
 
