@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import uuid
 
@@ -8,6 +9,7 @@ from typing import Any
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -50,6 +52,10 @@ from app.services.media_service import (
 
 from app.services.message_store import (
     message_store,
+)
+
+from app.services.memory_service import (
+    memory_service,
 )
 
 
@@ -504,6 +510,63 @@ def build_llm_messages(
         )
 
     return result
+
+
+async def add_relevant_memory_context(
+    messages: list[
+        dict[
+            str,
+            Any,
+        ]
+    ],
+    *,
+    current_user: AuthenticatedUser,
+    query: str,
+) -> list[
+    dict[
+        str,
+        Any,
+    ]
+]:
+
+    try:
+        memory_context = (
+            await asyncio.wait_for(
+                memory_service
+                .relevant_context(
+                    access_token=(
+                        current_user
+                        .access_token
+                    ),
+                    query=query,
+                ),
+                timeout=(
+                    settings
+                    .MEMORY_RETRIEVAL_TIMEOUT_SECONDS
+                ),
+            )
+        )
+
+    except asyncio.TimeoutError:
+        memory_context = ""
+
+    if not memory_context:
+        return messages
+
+    return [
+        {
+            "role":
+                "system",
+
+            "content": (
+                llm_service
+                .default_system_prompt
+                + "\n\n"
+                + memory_context
+            ),
+        },
+        *messages,
+    ]
 
 
 # ============================================================
@@ -1570,6 +1633,9 @@ async def send_message(
     request:
         SendMessageRequest,
 
+    background_tasks:
+        BackgroundTasks,
+
     current_user: (
         AuthenticatedUser
     ) = Depends(
@@ -1623,6 +1689,14 @@ async def send_message(
     llm_messages = (
         build_llm_messages(
             conversation
+        )
+    )
+
+    llm_messages = (
+        await add_relevant_memory_context(
+            llm_messages,
+            current_user=current_user,
+            query=content,
         )
     )
 
@@ -1705,6 +1779,25 @@ async def send_message(
         title_source=content,
     )
 
+    background_tasks.add_task(
+        memory_service
+        .learn_from_exchange,
+        user_id=(
+            current_user
+            .user_id
+        ),
+        access_token=(
+            current_user
+            .access_token
+        ),
+        user_message=content,
+        source_id=chat_id,
+        source_message_id=(
+            user_message
+            .message_id
+        ),
+    )
+
     return {
         "chat":
             chat,
@@ -1739,6 +1832,9 @@ async def edit_message(
 
     request:
         EditMessageRequest,
+
+    background_tasks:
+        BackgroundTasks,
 
     current_user: (
         AuthenticatedUser
@@ -1957,6 +2053,14 @@ async def edit_message(
         )
     )
 
+    llm_messages = (
+        await add_relevant_memory_context(
+            llm_messages,
+            current_user=current_user,
+            query=content,
+        )
+    )
+
     # ========================================================
     # REGENERATE
     # ========================================================
@@ -2102,6 +2206,25 @@ async def edit_message(
         chat
     )
 
+    background_tasks.add_task(
+        memory_service
+        .learn_from_exchange,
+        user_id=(
+            current_user
+            .user_id
+        ),
+        access_token=(
+            current_user
+            .access_token
+        ),
+        user_message=content,
+        source_id=chat_id,
+        source_message_id=(
+            edited_message
+            .message_id
+        ),
+    )
+
     return {
         "chat":
             chat,
@@ -2132,6 +2255,7 @@ async def edit_message(
 async def send_message_with_attachments(
     chat_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
 
     content: str = Form(
         default=""
@@ -2201,6 +2325,14 @@ async def send_message_with_attachments(
     llm_messages = (
         build_llm_messages(
             previous_messages
+        )
+    )
+
+    llm_messages = (
+        await add_relevant_memory_context(
+            llm_messages,
+            current_user=current_user,
+            query=display_content,
         )
     )
 
@@ -2346,6 +2478,25 @@ async def send_message_with_attachments(
     update_chat_metadata(
         chat=chat,
         title_source=display_content,
+    )
+
+    background_tasks.add_task(
+        memory_service
+        .learn_from_exchange,
+        user_id=(
+            current_user
+            .user_id
+        ),
+        access_token=(
+            current_user
+            .access_token
+        ),
+        user_message=display_content,
+        source_id=chat_id,
+        source_message_id=(
+            user_message
+            .message_id
+        ),
     )
 
     return {

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Brain,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -300,6 +301,12 @@ export default function Sidebar({
     mounted &&
     pathname?.startsWith(
       "/workspace"
+    );
+
+  const isMemory =
+    mounted &&
+    pathname?.startsWith(
+      "/memory"
     );
 
   // ==========================================================
@@ -716,6 +723,20 @@ export default function Sidebar({
     );
   }
 
+  function openMemory() {
+    setSearch("");
+
+    setProfileOpen(
+      false
+    );
+
+    onMobileClose();
+
+    router.push(
+      "/memory"
+    );
+  }
+
   async function handleNewChat() {
     if (
       !isAuthenticated
@@ -853,6 +874,9 @@ export default function Sidebar({
         isConversation={
           isConversation
         }
+        isMemory={
+          isMemory
+        }
         search={
           search
         }
@@ -900,6 +924,9 @@ export default function Sidebar({
         }
         openConversation={
           openConversation
+        }
+        openMemory={
+          openMemory
         }
         openResearchChat={
           openResearchChat
@@ -965,23 +992,25 @@ export default function Sidebar({
             </IconButton>
           </div>
 
-          <div className="px-3">
-            <IconButton
-              onClick={
-                handleNewChat
-              }
-              title={
-                isConversation
-                  ? "New conversation"
-                  : "New research"
-              }
-              className="w-full"
-            >
-              <Plus
-                size={18}
-              />
-            </IconButton>
-          </div>
+          {!isMemory && (
+            <div className="px-3">
+              <IconButton
+                onClick={
+                  handleNewChat
+                }
+                title={
+                  isConversation
+                    ? "New conversation"
+                    : "New research"
+                }
+                className="w-full"
+              >
+                <Plus
+                  size={18}
+                />
+              </IconButton>
+            </div>
+          )}
 
           <div className="mt-3 space-y-1 px-3">
             <CollapsedModeButton
@@ -1008,6 +1037,20 @@ export default function Sidebar({
               }
             >
               <FlaskConical
+                size={17}
+              />
+            </CollapsedModeButton>
+
+            <CollapsedModeButton
+              active={
+                isMemory
+              }
+              label="Memory"
+              onClick={
+                openMemory
+              }
+            >
+              <Brain
                 size={17}
               />
             </CollapsedModeButton>
@@ -1144,6 +1187,9 @@ export default function Sidebar({
           isConversation={
             isConversation
           }
+          isMemory={
+            isMemory
+          }
           search={
             search
           }
@@ -1192,6 +1238,9 @@ export default function Sidebar({
           openConversation={
             openConversation
           }
+          openMemory={
+            openMemory
+          }
           openResearchChat={
             openResearchChat
           }
@@ -1226,6 +1275,7 @@ type ExpandedContentProps = {
 
   isResearch: boolean;
   isConversation: boolean;
+  isMemory: boolean;
 
   search: string;
 
@@ -1273,6 +1323,8 @@ type ExpandedContentProps = {
 
   openConversation: () => void;
 
+  openMemory: () => void;
+
   openResearchChat:
     (
       id: string
@@ -1303,6 +1355,7 @@ function ExpandedContent({
 
   isResearch,
   isConversation,
+  isMemory,
 
   search,
   setSearch,
@@ -1329,6 +1382,7 @@ function ExpandedContent({
 
   openResearch,
   openConversation,
+  openMemory,
 
   openResearchChat,
   openConversationChat,
@@ -1388,24 +1442,26 @@ function ExpandedContent({
 
       {/* NEW */}
 
-      <div className="px-3 pt-1">
-        <Button
-          variant="ghost"
-          fullWidth
-          onClick={
-            handleNewChat
-          }
-          className="justify-start"
-        >
-          <Plus
-            size={17}
-          />
+      {!isMemory && (
+        <div className="px-3 pt-1">
+          <Button
+            variant="ghost"
+            fullWidth
+            onClick={
+              handleNewChat
+            }
+            className="justify-start"
+          >
+            <Plus
+              size={17}
+            />
 
-          {isConversation
-            ? "New chat"
-            : "New research"}
-        </Button>
-      </div>
+            {isConversation
+              ? "New chat"
+              : "New research"}
+          </Button>
+        </div>
+      )}
 
       {/* MODES */}
 
@@ -1439,81 +1495,102 @@ function ExpandedContent({
             openResearch
           }
         />
+
+        <ModeButton
+          active={
+            isMemory
+          }
+          icon={
+            <Brain
+              size={17}
+            />
+          }
+          label="Memory"
+          onClick={
+            openMemory
+          }
+        />
       </div>
 
       {isAuthenticated ? (
         <>
-          {/* SEARCH */}
+          {!isMemory ? (
+            <>
+              {/* SEARCH */}
 
-          <div className="relative px-3 pt-4">
-            <Search
-              size={15}
-              className="
-                pointer-events-none
-                absolute
-                left-6
-                top-[26px]
-                z-10
-                text-white/25
-              "
-            />
+              <div className="relative px-3 pt-4">
+                <Search
+                  size={15}
+                  className="
+                    pointer-events-none
+                    absolute
+                    left-6
+                    top-[26px]
+                    z-10
+                    text-white/25
+                  "
+                />
 
-            <Input
-              value={
-                search
-              }
-              onChange={(
-                event
-              ) =>
-                setSearch(
-                  event.target.value
-                )
-              }
-              placeholder="Search"
-              className="
-                h-9
-                bg-white/[0.035]
-                pl-9
-                text-xs
-              "
-            />
-          </div>
+                <Input
+                  value={
+                    search
+                  }
+                  onChange={(
+                    event
+                  ) =>
+                    setSearch(
+                      event.target.value
+                    )
+                  }
+                  placeholder="Search"
+                  className="
+                    h-9
+                    bg-white/[0.035]
+                    pl-9
+                    text-xs
+                  "
+                />
+              </div>
 
-          {/* HISTORY */}
+              {/* HISTORY */}
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 pt-5">
-            {isConversation ? (
-              <ConversationHistory
-                groups={
-                  conversationGroups
-                }
-                loading={
-                  conversationLoading
-                }
-                activeChatId={
-                  activeConversationId
-                }
-                onOpen={
-                  openConversationChat
-                }
-              />
-            ) : (
-              <ResearchHistory
-                groups={
-                  researchGroups
-                }
-                loading={
-                  researchLoading
-                }
-                activeChatId={
-                  activeResearchId
-                }
-                onOpen={
-                  openResearchChat
-                }
-              />
-            )}
-          </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4 pt-5">
+                {isConversation ? (
+                  <ConversationHistory
+                    groups={
+                      conversationGroups
+                    }
+                    loading={
+                      conversationLoading
+                    }
+                    activeChatId={
+                      activeConversationId
+                    }
+                    onOpen={
+                      openConversationChat
+                    }
+                  />
+                ) : (
+                  <ResearchHistory
+                    groups={
+                      researchGroups
+                    }
+                    loading={
+                      researchLoading
+                    }
+                    activeChatId={
+                      activeResearchId
+                    }
+                    onOpen={
+                      openResearchChat
+                    }
+                  />
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="min-h-0 flex-1" />
+          )}
 
           {/* ACCOUNT */}
 

@@ -18,6 +18,10 @@ import {
 } from "@/lib/research";
 
 import {
+  usePathname,
+} from "next/navigation";
+
+import {
   createClient,
 } from "@/lib/supabase/client";
 
@@ -139,6 +143,9 @@ export function ResearchProvider({
 }: {
   children: ReactNode;
 }) {
+  const pathname =
+    usePathname();
+
   const supabase =
     createClient();
 
@@ -445,9 +452,18 @@ export function ResearchProvider({
       return;
     }
 
+    if (
+      !pathname?.startsWith(
+        "/workspace"
+      )
+    ) {
+      return;
+    }
+
     refreshChats();
   }, [
     authenticated,
+    pathname,
   ]);
 
   // ==========================================================

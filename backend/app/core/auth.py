@@ -26,8 +26,10 @@ class AuthenticatedUser:
     def __init__(
         self,
         user_id: str,
+        access_token: str,
     ):
         self.user_id = user_id
+        self.access_token = access_token
 
 
 # ============================================================
@@ -199,5 +201,6 @@ async def get_current_user(
     # ========================================================
 
     return AuthenticatedUser(
-        user_id=user_id
+        user_id=user_id,
+        access_token=token,
     )

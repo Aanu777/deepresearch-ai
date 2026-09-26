@@ -20,6 +20,7 @@ from app.core.payload_crypto import (
 TARGET_PREFIXES = (
     "/api/v1/conversations",
     "/api/v1/research",
+    "/api/v1/memory",
 )
 
 ENCRYPTED_JSON_TYPE = (

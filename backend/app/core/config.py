@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         "llama-3.3-70b-instruct"
     )
 
-    OPENROUTER_MAX_TOKENS: int = 1024
+    OPENROUTER_MAX_TOKENS: int = 4096
 
     OPENROUTER_MAX_HISTORY_MESSAGES: int = 24
 
@@ -64,6 +64,30 @@ class Settings(BaseSettings):
     # ========================================================
 
     SUPABASE_URL: str
+
+    SUPABASE_PUBLISHABLE_KEY: str = ""
+
+    # ========================================================
+    # LONG-TERM SEMANTIC MEMORY
+    # ========================================================
+
+    MEMORY_ENABLED: bool = True
+
+    MEMORY_EMBEDDING_MODEL: str = (
+        "nvidia/nemotron-3-embed-1b:free"
+    )
+
+    MEMORY_EMBEDDING_DIMENSIONS: int = 2048
+
+    MEMORY_TOP_K: int = 6
+
+    MEMORY_MIN_SIMILARITY: float = 0.18
+
+    MEMORY_RETRIEVAL_TIMEOUT_SECONDS: float = 1.5
+
+    MEMORY_EXTRACTION_MODEL: str = (
+        "openrouter/free"
+    )
 
     # ========================================================
     # SPEECH TO TEXT — DEEPGRAM

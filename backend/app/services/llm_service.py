@@ -42,7 +42,11 @@ class LLMService:
             "You are DeepResearch AI, a capable research "
             "and general-purpose assistant. "
             "Be accurate, clear, useful, and well structured. "
-            "Do not invent facts when information is uncertain."
+            "Do not invent facts when information is uncertain. "
+            "When providing source code, use standard Markdown fenced "
+            "code blocks with the appropriate language tag. Never emit "
+            "internal tool-call tokens, write(path=...), function-call "
+            "syntax, or tool execution markup as part of a normal answer."
         )
 
     # ========================================================
@@ -508,10 +512,13 @@ class LLMService:
 
     _PROVIDER_SAFETY_LINE = re.compile(
         (
-            r"(?im)^\s*User Safety:\s*"
-            r"(?:safe|unsafe)\s+"
-            r"Response Safety:\s*"
-            r"(?:safe|unsafe)\s*$"
+            r"(?im)^\s*(?:"
+            r"User Safety:\s*(?:safe|unsafe)"
+            r"(?:\s+Response Safety:\s*(?:safe|unsafe))?"
+            r"|"
+            r"Response Safety:\s*(?:safe|unsafe)"
+            r"(?:\s+User Safety:\s*(?:safe|unsafe))?"
+            r")\s*$"
         )
     )
 
@@ -551,18 +558,221 @@ class LLMService:
                 content
             )
 
-        if not (
+        has_safety_label = (
             "User Safety:"
             in text
-            and "Response Safety:"
+            or "Response Safety:"
             in text
-        ):
+        )
+
+        if not has_safety_label:
             return False
 
         return not (
             cls
             ._strip_provider_safety_metadata(
                 text
+            )
+        )
+
+    @staticmethod
+    def _normalize_language_from_path(
+        path: str,
+    ) -> str:
+
+        suffix = (
+            path
+            .rsplit(
+                ".",
+                1,
+            )[-1]
+            .lower()
+            if "." in path
+            else ""
+        )
+
+        return {
+            "py": "python",
+            "js": "javascript",
+            "jsx": "jsx",
+            "ts": "typescript",
+            "tsx": "tsx",
+            "html": "html",
+            "css": "css",
+            "json": "json",
+            "sql": "sql",
+            "sh": "bash",
+            "bash": "bash",
+            "ps1": "powershell",
+            "md": "markdown",
+            "yml": "yaml",
+            "yaml": "yaml",
+            "java": "java",
+            "c": "c",
+            "cpp": "cpp",
+            "cs": "csharp",
+            "rs": "rust",
+            "go": "go",
+        }.get(
+            suffix,
+            ""
+        )
+
+    @classmethod
+    def _convert_leaked_tool_markup(
+        cls,
+        text: str,
+    ) -> str:
+
+        if (
+            "<|tool_call_start|>"
+            not in text
+            and "write(path="
+            not in text
+        ):
+            return text
+
+        header = re.search(
+            (
+                r"(?:<\|tool_call_start\|>\s*)?"
+                r"\[?write\("
+                r"path=(?P<quote>['\"])"
+                r"(?P<path>.+?)"
+                r"(?P=quote)\s*,\s*"
+                r"content=(?P<cquote>['\"])"
+            ),
+            text,
+            flags=re.DOTALL,
+        )
+
+        if header is None:
+            return (
+                text
+                .replace(
+                    "<|tool_call_start|>",
+                    ""
+                )
+                .replace(
+                    "<|tool_call_end|>",
+                    ""
+                )
+                .strip()
+            )
+
+        before = (
+            text[
+                :header.start()
+            ]
+            .strip()
+        )
+
+        path = (
+            header
+            .group(
+                "path"
+            )
+            .strip()
+        )
+
+        content_quote = (
+            header
+            .group(
+                "cquote"
+            )
+        )
+
+        tool_end_token = (
+            "<|tool_call_end|>"
+        )
+
+        tool_end = text.find(
+            tool_end_token,
+            header.end(),
+        )
+
+        if tool_end >= 0:
+            raw_content = text[
+                header.end():
+                tool_end
+            ]
+
+            raw_content = re.sub(
+                (
+                    re.escape(
+                        content_quote
+                    )
+                    + r"\s*\)\s*\]?\s*$"
+                ),
+                "",
+                raw_content,
+                flags=re.DOTALL,
+            )
+
+            after = (
+                text[
+                    tool_end
+                    + len(
+                        tool_end_token
+                    ):
+                ]
+                .strip()
+            )
+
+        else:
+            raw_content = text[
+                header.end():
+            ]
+
+            after = ""
+
+        decoded_content = (
+            raw_content
+            .replace(
+                "\\r\\n",
+                "\n"
+            )
+            .replace(
+                "\\n",
+                "\n"
+            )
+            .replace(
+                "\\t",
+                "\t"
+            )
+            .replace(
+                "\\\"",
+                "\""
+            )
+            .replace(
+                "\\'",
+                "'"
+            )
+        )
+
+        language = (
+            cls
+            ._normalize_language_from_path(
+                path
+            )
+        )
+
+        code_block = (
+            f"**{path}**\n\n"
+            f"```{language}\n"
+            f"{decoded_content.rstrip()}\n"
+            f"```"
+        )
+
+        return (
+            "\n\n".join(
+                part
+                for part
+                in [
+                    before,
+                    code_block,
+                    after,
+                ]
+                if part
             )
         )
 
@@ -585,8 +795,11 @@ class LLMService:
         ):
             return (
                 cls
-                ._strip_provider_safety_metadata(
-                    content
+                ._convert_leaked_tool_markup(
+                    cls
+                    ._strip_provider_safety_metadata(
+                        content
+                    )
                 )
             )
 
@@ -630,18 +843,24 @@ class LLMService:
 
             return (
                 cls
-                ._strip_provider_safety_metadata(
-                    "\n".join(
-                        parts
+                ._convert_leaked_tool_markup(
+                    cls
+                    ._strip_provider_safety_metadata(
+                        "\n".join(
+                            parts
+                        )
                     )
                 )
             )
 
         return (
             cls
-            ._strip_provider_safety_metadata(
-                str(
-                    content
+            ._convert_leaked_tool_markup(
+                cls
+                ._strip_provider_safety_metadata(
+                    str(
+                        content
+                    )
                 )
             )
         )

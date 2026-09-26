@@ -7,6 +7,7 @@ import {
   type NextRequest,
 } from "next/server";
 
+
 export async function proxy(
   request: NextRequest
 ) {
@@ -15,17 +16,56 @@ export async function proxy(
       request,
     });
 
+  // Local development already authenticates through the
+  // browser Supabase client. Avoid a network auth round-trip
+  // on every route request while running `next dev`.
+  if (
+    process.env.NODE_ENV ===
+    "development"
+  ) {
+    return response;
+  }
+
+  const hasSupabaseAuthCookie =
+    request.cookies
+      .getAll()
+      .some(
+        ({
+          name,
+        }) =>
+          name.startsWith(
+            "sb-"
+          ) &&
+          name.includes(
+            "auth-token"
+          )
+      );
+
+  // Public/anonymous requests do not need a Supabase
+  // claims refresh. This keeps landing/auth routes fast.
+  if (
+    !hasSupabaseAuthCookie
+  ) {
+    return response;
+  }
+
   const supabase =
     createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      process.env
+        .NEXT_PUBLIC_SUPABASE_URL!,
+      process.env
+        .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
       {
         cookies: {
           getAll() {
-            return request.cookies.getAll();
+            return request
+              .cookies
+              .getAll();
           },
 
-          setAll(cookiesToSet) {
+          setAll(
+            cookiesToSet
+          ) {
             cookiesToSet.forEach(
               ({
                 name,
@@ -54,17 +94,21 @@ export async function proxy(
       }
     );
 
-  await supabase.auth.getClaims();
+  try {
+    await supabase.auth
+      .getClaims();
+
+  } catch {
+    // Session refresh must never make routing unavailable.
+    // Browser auth state will handle sign-in recovery.
+  }
 
   return response;
 }
 
+
 export const config = {
   matcher: [
-    /*
-     * Run on application routes,
-     * excluding static assets.
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
