@@ -2,6 +2,10 @@ import {
   createClient,
 } from "@/lib/supabase/client";
 
+import {
+  secureFetch,
+} from "@/lib/secure-transport";
+
 
 /* ============================================================
    API
@@ -248,7 +252,7 @@ async function authenticatedFetch(
 
 
   const response =
-    await fetch(
+    await secureFetch(
       `${API_URL}${path}`,
       {
         ...options,
