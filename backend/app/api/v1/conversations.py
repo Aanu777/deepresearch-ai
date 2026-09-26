@@ -2244,6 +2244,7 @@ async def edit_message(
 async def send_message_with_attachments(
     chat_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
 
     content: str = Form(
         default=""
@@ -2313,6 +2314,14 @@ async def send_message_with_attachments(
     llm_messages = (
         build_llm_messages(
             previous_messages
+        )
+    )
+
+    llm_messages = (
+        await add_relevant_memory_context(
+            llm_messages,
+            current_user=current_user,
+            query=display_content,
         )
     )
 
@@ -2458,6 +2467,25 @@ async def send_message_with_attachments(
     update_chat_metadata(
         chat=chat,
         title_source=display_content,
+    )
+
+    background_tasks.add_task(
+        memory_service
+        .learn_from_exchange,
+        user_id=(
+            current_user
+            .user_id
+        ),
+        access_token=(
+            current_user
+            .access_token
+        ),
+        user_message=display_content,
+        source_id=chat_id,
+        source_message_id=(
+            user_message
+            .message_id
+        ),
     )
 
     return {
