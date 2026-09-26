@@ -19,6 +19,22 @@ type EncryptedEnvelope = {
   request_id?: string;
 };
 
+function toArrayBuffer(
+  bytes: Uint8Array
+): ArrayBuffer {
+  const copy =
+    new Uint8Array(
+      bytes.byteLength
+    );
+
+  copy.set(
+    bytes
+  );
+
+  return copy.buffer;
+}
+
+
 function bytesToBase64(
   value: ArrayBuffer | Uint8Array
 ) {
@@ -99,8 +115,10 @@ async function getPublicKey() {
     publicKeyPromise =
       crypto.subtle.importKey(
         "spki",
-        base64ToBytes(
-          PUBLIC_KEY_B64
+        toArrayBuffer(
+          base64ToBytes(
+            PUBLIC_KEY_B64
+          )
         ),
         {
           name:
@@ -153,13 +171,21 @@ async function encryptBytes(
       {
         name:
           "AES-GCM",
-        iv,
-        additionalData,
+        iv:
+          toArrayBuffer(
+            iv
+          ),
+        additionalData:
+          toArrayBuffer(
+            additionalData
+          ),
         tagLength:
           128,
       },
       key,
-      plaintext
+      toArrayBuffer(
+        plaintext
+      )
     );
 
   return {
@@ -185,16 +211,23 @@ async function decryptBytes(
         name:
           "AES-GCM",
         iv:
-          base64ToBytes(
-            envelope.iv
+          toArrayBuffer(
+            base64ToBytes(
+              envelope.iv
+            )
           ),
-        additionalData,
+        additionalData:
+          toArrayBuffer(
+            additionalData
+          ),
         tagLength:
           128,
       },
       key,
-      base64ToBytes(
-        envelope.ciphertext
+      toArrayBuffer(
+        base64ToBytes(
+          envelope.ciphertext
+        )
       )
     );
 
@@ -486,10 +519,8 @@ export async function secureFetch(
   }
 
   const responseBody =
-    plaintext.buffer.slice(
-      plaintext.byteOffset,
-      plaintext.byteOffset +
-        plaintext.byteLength
+    toArrayBuffer(
+      plaintext
     );
 
   return new Response(
