@@ -434,15 +434,43 @@ export async function secureFetch(
     );
   }
 
-  const response =
-    await fetch(
-      input,
+  let response: Response;
+
+  try {
+    response =
+      await fetch(
+        input,
+        {
+          ...init,
+          headers,
+          body,
+        }
+      );
+
+  } catch (
+    caught
+  ) {
+    const target =
+      typeof input ===
+      "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    console.error(
+      "Secure API request failed:",
       {
-        ...init,
-        headers,
-        body,
+        target,
+        cause:
+          caught,
       }
     );
+
+    throw new Error(
+      `Unable to reach the DeepResearch API at ${target}.`
+    );
+  }
 
   if (
     response.status ===
