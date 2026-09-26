@@ -83,6 +83,8 @@ class Settings(BaseSettings):
 
     MEMORY_MIN_SIMILARITY: float = 0.18
 
+    MEMORY_RETRIEVAL_TIMEOUT_SECONDS: float = 1.5
+
     MEMORY_EXTRACTION_MODEL: str = (
         "openrouter/free"
     )
