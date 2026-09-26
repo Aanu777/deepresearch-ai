@@ -42,7 +42,11 @@ class LLMService:
             "You are DeepResearch AI, a capable research "
             "and general-purpose assistant. "
             "Be accurate, clear, useful, and well structured. "
-            "Do not invent facts when information is uncertain."
+            "Do not invent facts when information is uncertain. "
+            "When providing source code, use standard Markdown fenced "
+            "code blocks with the appropriate language tag. Never emit "
+            "internal tool-call tokens, write(path=...), function-call "
+            "syntax, or tool execution markup as part of a normal answer."
         )
 
     # ========================================================
@@ -566,6 +570,176 @@ class LLMService:
             )
         )
 
+    @staticmethod
+    def _normalize_language_from_path(
+        path: str,
+    ) -> str:
+
+        suffix = (
+            path
+            .rsplit(
+                ".",
+                1,
+            )[-1]
+            .lower()
+            if "." in path
+            else ""
+        )
+
+        return {
+            "py": "python",
+            "js": "javascript",
+            "jsx": "jsx",
+            "ts": "typescript",
+            "tsx": "tsx",
+            "html": "html",
+            "css": "css",
+            "json": "json",
+            "sql": "sql",
+            "sh": "bash",
+            "bash": "bash",
+            "ps1": "powershell",
+            "md": "markdown",
+            "yml": "yaml",
+            "yaml": "yaml",
+            "java": "java",
+            "c": "c",
+            "cpp": "cpp",
+            "cs": "csharp",
+            "rs": "rust",
+            "go": "go",
+        }.get(
+            suffix,
+            ""
+        )
+
+    @classmethod
+    def _convert_leaked_tool_markup(
+        cls,
+        text: str,
+    ) -> str:
+
+        if (
+            "<|tool_call_start|>"
+            not in text
+            and "write(path="
+            not in text
+        ):
+            return text
+
+        pattern = re.compile(
+            (
+                r"<\|tool_call_start\|>\s*"
+                r"\[?write\("
+                r"path=(?P<quote>['\"])"
+                r"(?P<path>.+?)"
+                r"(?P=quote)\s*,\s*"
+                r"content=(?P<cquote>['\"])"
+                r"(?P<content>.*?)"
+                r"(?P=cquote)\s*\)"
+                r"\]?\s*"
+                r"(?:<\|tool_call_end\|>)?"
+            ),
+            re.DOTALL,
+        )
+
+        match = pattern.search(
+            text
+        )
+
+        if match is None:
+            return (
+                text
+                .replace(
+                    "<|tool_call_start|>",
+                    ""
+                )
+                .replace(
+                    "<|tool_call_end|>",
+                    ""
+                )
+                .strip()
+            )
+
+        before = (
+            text[
+                :match.start()
+            ]
+            .strip()
+        )
+
+        path = (
+            match
+            .group(
+                "path"
+            )
+            .strip()
+        )
+
+        raw_content = (
+            match
+            .group(
+                "content"
+            )
+        )
+
+        try:
+            decoded_content = bytes(
+                raw_content,
+                "utf-8",
+            ).decode(
+                "unicode_escape"
+            )
+
+        except Exception:
+            decoded_content = (
+                raw_content
+                .replace(
+                    "\\n",
+                    "\n"
+                )
+                .replace(
+                    "\\t",
+                    "\t"
+                )
+            )
+
+        language = (
+            cls
+            ._normalize_language_from_path(
+                path
+            )
+        )
+
+        code_block = (
+            f"**{path}**\n\n"
+            f"```{language}\n"
+            f"{decoded_content.rstrip()}\n"
+            f"```"
+        )
+
+        after = (
+            text[
+                match.end():
+            ]
+            .strip()
+        )
+
+        parts = [
+            part
+            for part
+            in [
+                before,
+                code_block,
+                after,
+            ]
+            if part
+        ]
+
+        return "\n\n".join(
+            parts
+        )
+
     # ========================================================
     # NORMALIZE OUTPUT
     # ========================================================
@@ -585,8 +759,11 @@ class LLMService:
         ):
             return (
                 cls
-                ._strip_provider_safety_metadata(
-                    content
+                ._convert_leaked_tool_markup(
+                    cls
+                    ._strip_provider_safety_metadata(
+                        content
+                    )
                 )
             )
 
@@ -630,18 +807,24 @@ class LLMService:
 
             return (
                 cls
-                ._strip_provider_safety_metadata(
-                    "\n".join(
-                        parts
+                ._convert_leaked_tool_markup(
+                    cls
+                    ._strip_provider_safety_metadata(
+                        "\n".join(
+                            parts
+                        )
                     )
                 )
             )
 
         return (
             cls
-            ._strip_provider_safety_metadata(
-                str(
-                    content
+            ._convert_leaked_tool_markup(
+                cls
+                ._strip_provider_safety_metadata(
+                    str(
+                        content
+                    )
                 )
             )
         )
