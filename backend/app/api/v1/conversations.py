@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import (
     APIRouter,
@@ -58,6 +58,10 @@ from app.services.memory_service import (
     memory_service,
 )
 
+from app.services.feedback_service import (
+    feedback_service,
+)
+
 
 router = APIRouter()
 
@@ -108,6 +112,33 @@ class GenerateImageRequest(
     prompt: str
 
     source_message_id: (
+        str | None
+    ) = None
+
+
+class MessageFeedbackRequest(
+    BaseModel
+):
+    rating: Literal[
+        "up",
+        "down",
+    ]
+
+    reason: (
+        Literal[
+            "incorrect",
+            "did_not_follow_instructions",
+            "outdated",
+            "too_verbose",
+            "too_brief",
+            "bad_sources",
+            "formatting",
+            "other",
+        ]
+        | None
+    ) = None
+
+    correction: (
         str | None
     ) = None
 
@@ -1157,6 +1188,55 @@ def require_image_message(
     return message
 
 
+def previous_user_content(
+    *,
+    chat_id: str,
+    message_id: str,
+) -> str | None:
+
+    messages = (
+        message_store
+        .get_by_chat(
+            chat_id
+        )
+    )
+
+    target_index = next(
+        (
+            index
+            for index, message
+            in enumerate(
+                messages
+            )
+            if (
+                message.message_id
+                == message_id
+            )
+        ),
+        None,
+    )
+
+    if target_index is None:
+        return None
+
+    for message in reversed(
+        messages[
+            :target_index
+        ]
+    ):
+        if (
+            message.role
+            == "user"
+            and message.content.strip()
+        ):
+            return (
+                message.content
+                .strip()
+            )
+
+    return None
+
+
 # ============================================================
 # AUDIO TRANSCRIPTION
 # ============================================================
@@ -1807,6 +1887,195 @@ async def send_message(
 
         "assistant_message":
             assistant_message,
+    }
+
+
+# ============================================================
+# MESSAGE FEEDBACK
+# ============================================================
+
+
+@router.post(
+    "/{chat_id}/messages/{message_id}/feedback"
+)
+async def submit_message_feedback(
+    chat_id: str,
+    message_id: str,
+
+    request:
+        MessageFeedbackRequest,
+
+    background_tasks:
+        BackgroundTasks,
+
+    current_user: (
+        AuthenticatedUser
+    ) = Depends(
+        get_current_user
+    ),
+):
+
+    require_chat(
+        chat_id,
+        current_user.user_id,
+    )
+
+    message = (
+        message_store
+        .get(
+            message_id
+        )
+    )
+
+    if (
+        message is None
+        or message.chat_id
+        != chat_id
+    ):
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Assistant message "
+                "could not be found."
+            ),
+        )
+
+    if message.role != "assistant":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Feedback can only be "
+                "submitted for assistant "
+                "messages."
+            ),
+        )
+
+    correction = (
+        request.correction
+        .strip()
+        if request.correction
+        else None
+    )
+
+    if (
+        correction
+        and len(
+            correction
+        ) > 4000
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Correction is too long."
+            ),
+        )
+
+    reason = (
+        request.reason
+        if request.rating
+        == "down"
+        else None
+    )
+
+    if request.rating == "up":
+        correction = None
+
+    rating_value = (
+        1
+        if request.rating
+        == "up"
+        else -1
+    )
+
+    try:
+        await feedback_service.upsert(
+            user_id=(
+                current_user
+                .user_id
+            ),
+            access_token=(
+                current_user
+                .access_token
+            ),
+            chat_id=chat_id,
+            message_id=message_id,
+            rating=rating_value,
+            reason=reason,
+            correction=correction,
+            metadata={
+                "message_type":
+                    message.message_type,
+
+                "source":
+                    "conversation_ui",
+            },
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Feedback could not be "
+                "saved right now."
+            ),
+        ) from exc
+
+    background_tasks.add_task(
+        memory_service
+        .remove_corrections_for_source,
+        access_token=(
+            current_user
+            .access_token
+        ),
+        source_message_id=(
+            message_id
+        ),
+    )
+
+    if (
+        request.rating
+        == "down"
+        and correction
+    ):
+        background_tasks.add_task(
+            memory_service
+            .learn_from_correction,
+            user_id=(
+                current_user
+                .user_id
+            ),
+            access_token=(
+                current_user
+                .access_token
+            ),
+            correction=correction,
+            source_id=chat_id,
+            source_message_id=(
+                message_id
+            ),
+            context=(
+                previous_user_content(
+                    chat_id=chat_id,
+                    message_id=(
+                        message_id
+                    ),
+                )
+            ),
+        )
+
+    return {
+        "saved":
+            True,
+
+        "rating":
+            request.rating,
+
+        "correction_learning":
+            bool(
+                request.rating
+                == "down"
+                and correction
+            ),
     }
 
 

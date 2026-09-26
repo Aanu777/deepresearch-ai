@@ -13,6 +13,8 @@ import {
   Check,
   Copy,
   Pencil,
+  ThumbsDown,
+  ThumbsUp,
   X,
 } from "lucide-react";
 
@@ -23,8 +25,10 @@ import {
   useConversation,
 } from "@/components/context/ConversationContext";
 
-import type {
-  ConversationMessage,
+import {
+  submitConversationFeedback,
+  type ConversationFeedbackReason,
+  type ConversationMessage,
 } from "@/lib/conversation";
 
 import ImageMessage from "./ImageMessage";
@@ -37,6 +41,45 @@ import ImageMessage from "./ImageMessage";
 type MessageBubbleProps = {
   message: ConversationMessage;
 };
+
+
+const FEEDBACK_REASONS: Array<{
+  value: ConversationFeedbackReason;
+  label: string;
+}> = [
+  {
+    value: "incorrect",
+    label: "Incorrect",
+  },
+  {
+    value: "did_not_follow_instructions",
+    label: "Didn't follow instructions",
+  },
+  {
+    value: "outdated",
+    label: "Outdated",
+  },
+  {
+    value: "too_verbose",
+    label: "Too verbose",
+  },
+  {
+    value: "too_brief",
+    label: "Too brief",
+  },
+  {
+    value: "bad_sources",
+    label: "Bad sources",
+  },
+  {
+    value: "formatting",
+    label: "Formatting",
+  },
+  {
+    value: "other",
+    label: "Other",
+  },
+];
 
 
 /* ============================================================
@@ -263,6 +306,62 @@ function TextMessage({
     useState(false);
 
 
+  const [
+    feedbackRating,
+    setFeedbackRating,
+  ] =
+    useState<
+      "up" | "down" | null
+    >(
+      null
+    );
+
+
+  const [
+    feedbackOpen,
+    setFeedbackOpen,
+  ] =
+    useState(false);
+
+
+  const [
+    feedbackReason,
+    setFeedbackReason,
+  ] =
+    useState<
+      ConversationFeedbackReason | ""
+    >(
+      ""
+    );
+
+
+  const [
+    feedbackCorrection,
+    setFeedbackCorrection,
+  ] =
+    useState(
+      ""
+    );
+
+
+  const [
+    feedbackSubmitting,
+    setFeedbackSubmitting,
+  ] =
+    useState(false);
+
+
+  const [
+    feedbackError,
+    setFeedbackError,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+
   const textareaRef =
     useRef<HTMLTextAreaElement | null>(
       null
@@ -382,6 +481,179 @@ function TextMessage({
       console.error(
         "Failed to copy message:",
         error
+      );
+    }
+  }
+
+
+  async function submitPositiveFeedback() {
+    if (
+      isUser ||
+      feedbackSubmitting
+    ) {
+      return;
+    }
+
+    setFeedbackSubmitting(
+      true
+    );
+
+    setFeedbackError(
+      null
+    );
+
+    try {
+      await submitConversationFeedback(
+        message.chat_id,
+        message.message_id,
+        {
+          rating:
+            "up",
+        }
+      );
+
+      setFeedbackRating(
+        "up"
+      );
+
+      setFeedbackOpen(
+        false
+      );
+
+      setFeedbackReason(
+        ""
+      );
+
+      setFeedbackCorrection(
+        ""
+      );
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "Failed to save positive feedback:",
+        error
+      );
+
+      setFeedbackError(
+        error instanceof Error
+          ? error.message
+          : "Feedback could not be saved."
+      );
+
+    } finally {
+      setFeedbackSubmitting(
+        false
+      );
+    }
+  }
+
+
+  function openNegativeFeedback() {
+    if (
+      isUser ||
+      feedbackSubmitting
+    ) {
+      return;
+    }
+
+    setFeedbackError(
+      null
+    );
+
+    setFeedbackOpen(
+      true
+    );
+  }
+
+
+  function cancelNegativeFeedback() {
+    if (
+      feedbackSubmitting
+    ) {
+      return;
+    }
+
+    setFeedbackOpen(
+      false
+    );
+
+    setFeedbackError(
+      null
+    );
+  }
+
+
+  async function submitNegativeFeedback() {
+    if (
+      isUser ||
+      feedbackSubmitting
+    ) {
+      return;
+    }
+
+    setFeedbackSubmitting(
+      true
+    );
+
+    setFeedbackError(
+      null
+    );
+
+    try {
+      const trimmedCorrection =
+        feedbackCorrection
+        .trim();
+
+      await submitConversationFeedback(
+        message.chat_id,
+        message.message_id,
+        {
+          rating:
+            "down",
+
+          ...(feedbackReason
+            ? {
+                reason:
+                  feedbackReason,
+              }
+            : {}),
+
+          ...(trimmedCorrection
+            ? {
+                correction:
+                  trimmedCorrection,
+              }
+            : {}),
+        }
+      );
+
+      setFeedbackRating(
+        "down"
+      );
+
+      setFeedbackOpen(
+        false
+      );
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "Failed to save negative feedback:",
+        error
+      );
+
+      setFeedbackError(
+        error instanceof Error
+          ? error.message
+          : "Feedback could not be saved."
+      );
+
+    } finally {
+      setFeedbackSubmitting(
+        false
       );
     }
   }
@@ -885,69 +1157,311 @@ function TextMessage({
             ================================================== */}
 
         {!isStreaming && (
-        <div
-          className={`
-            mt-1
+          <>
+            <div
+              className={`
+                mt-1
 
-            flex
-            h-8
-            items-center
-            gap-0.5
+                flex
+                h-8
+                items-center
+                gap-0.5
 
-            opacity-0
+                transition-opacity
+                duration-150
 
-            transition-opacity
-            duration-150
+                ${
+                  !isUser &&
+                  (
+                    feedbackRating ||
+                    feedbackOpen
+                  )
+                    ? "opacity-100"
+                    : "opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100 sm:focus-within:opacity-100"
+                }
 
-            group-hover/message:opacity-100
-            focus-within:opacity-100
-
-            ${
-              isUser
-                ? "justify-end pr-1"
-                : "justify-start"
-            }
-          `}
-        >
-          <MessageAction
-            label={
-              copied
-                ? "Copied"
-                : "Copy"
-            }
-            onClick={
-              handleCopy
-            }
-          >
-            {copied ? (
-              <Check
-                size={13}
-                strokeWidth={1.9}
-              />
-            ) : (
-              <Copy
-                size={13}
-                strokeWidth={1.7}
-              />
-            )}
-          </MessageAction>
-
-
-          {isUser && (
-            <MessageAction
-              label="Edit message"
-              disabled={sending}
-              onClick={
-                startEditing
-              }
+                ${
+                  isUser
+                    ? "justify-end pr-1"
+                    : "justify-start"
+                }
+              `}
             >
-              <Pencil
-                size={13}
-                strokeWidth={1.7}
-              />
-            </MessageAction>
-          )}
-        </div>
+              <MessageAction
+                label={
+                  copied
+                    ? "Copied"
+                    : "Copy"
+                }
+                onClick={
+                  handleCopy
+                }
+              >
+                {copied ? (
+                  <Check
+                    size={13}
+                    strokeWidth={1.9}
+                  />
+                ) : (
+                  <Copy
+                    size={13}
+                    strokeWidth={1.7}
+                  />
+                )}
+              </MessageAction>
+
+
+              {isUser ? (
+                <MessageAction
+                  label="Edit message"
+                  disabled={sending}
+                  onClick={
+                    startEditing
+                  }
+                >
+                  <Pencil
+                    size={13}
+                    strokeWidth={1.7}
+                  />
+                </MessageAction>
+              ) : (
+                <>
+                  <MessageAction
+                    label="Good response"
+                    active={
+                      feedbackRating ===
+                      "up"
+                    }
+                    disabled={
+                      feedbackSubmitting
+                    }
+                    onClick={() => {
+                      void submitPositiveFeedback();
+                    }}
+                  >
+                    <ThumbsUp
+                      size={13}
+                      strokeWidth={1.7}
+                    />
+                  </MessageAction>
+
+                  <MessageAction
+                    label="Bad response"
+                    active={
+                      feedbackRating ===
+                      "down"
+                    }
+                    disabled={
+                      feedbackSubmitting
+                    }
+                    onClick={
+                      openNegativeFeedback
+                    }
+                  >
+                    <ThumbsDown
+                      size={13}
+                      strokeWidth={1.7}
+                    />
+                  </MessageAction>
+                </>
+              )}
+            </div>
+
+            {!isUser &&
+              feedbackOpen && (
+              <div
+                className="
+                  mt-2
+                  max-w-xl
+                  rounded-2xl
+                  border
+                  border-white/[0.08]
+                  bg-white/[0.025]
+                  p-3
+                "
+              >
+                <p
+                  className="
+                    text-xs
+                    font-medium
+                    text-white/65
+                  "
+                >
+                  What went wrong?
+                </p>
+
+                <div
+                  className="
+                    mt-2
+                    flex
+                    flex-wrap
+                    gap-1.5
+                  "
+                >
+                  {FEEDBACK_REASONS.map(
+                    (
+                      reason
+                    ) => (
+                      <button
+                        key={
+                          reason.value
+                        }
+                        type="button"
+                        onClick={() => {
+                          setFeedbackReason(
+                            reason.value
+                          );
+                        }}
+                        className={`
+                          rounded-full
+                          border
+                          px-2.5
+                          py-1.5
+                          text-[11px]
+                          transition
+
+                          ${
+                            feedbackReason ===
+                            reason.value
+                              ? "border-white/[0.16] bg-white/[0.10] text-white/80"
+                              : "border-white/[0.07] bg-white/[0.025] text-white/38 hover:bg-white/[0.05] hover:text-white/65"
+                          }
+                        `}
+                      >
+                        {
+                          reason.label
+                        }
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <textarea
+                  value={
+                    feedbackCorrection
+                  }
+                  onChange={(
+                    event
+                  ) => {
+                    setFeedbackCorrection(
+                      event.target.value
+                    );
+                  }}
+                  maxLength={
+                    4000
+                  }
+                  rows={3}
+                  placeholder="What should DeepResearch have done instead? (optional)"
+                  className="
+                    mt-3
+                    w-full
+                    resize-y
+                    rounded-xl
+                    border
+                    border-white/[0.08]
+                    bg-black/20
+                    px-3
+                    py-2.5
+                    text-xs
+                    leading-5
+                    text-white/75
+                    outline-none
+                    placeholder:text-white/25
+                    focus:border-white/[0.14]
+                  "
+                />
+
+                {feedbackError && (
+                  <p
+                    className="
+                      mt-2
+                      text-[11px]
+                      text-red-300/80
+                    "
+                  >
+                    {feedbackError}
+                  </p>
+                )}
+
+                <div
+                  className="
+                    mt-3
+                    flex
+                    items-center
+                    justify-end
+                    gap-2
+                  "
+                >
+                  <button
+                    type="button"
+                    disabled={
+                      feedbackSubmitting
+                    }
+                    onClick={
+                      cancelNegativeFeedback
+                    }
+                    className="
+                      rounded-lg
+                      px-3
+                      py-1.5
+                      text-xs
+                      text-white/38
+                      transition
+                      hover:bg-white/[0.05]
+                      hover:text-white/65
+                      disabled:opacity-40
+                    "
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={
+                      feedbackSubmitting
+                    }
+                    onClick={() => {
+                      void submitNegativeFeedback();
+                    }}
+                    className="
+                      rounded-lg
+                      border
+                      border-white/[0.10]
+                      bg-white/[0.08]
+                      px-3
+                      py-1.5
+                      text-xs
+                      font-medium
+                      text-white/75
+                      transition
+                      hover:bg-white/[0.12]
+                      hover:text-white
+                      disabled:cursor-not-allowed
+                      disabled:opacity-40
+                    "
+                  >
+                    {feedbackSubmitting
+                      ? "Saving..."
+                      : "Submit feedback"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {!isUser &&
+              feedbackError &&
+              !feedbackOpen && (
+              <p
+                className="
+                  mt-1
+                  text-[11px]
+                  text-red-300/75
+                "
+              >
+                {feedbackError}
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1467,6 +1981,7 @@ function MessageAction({
   children,
   label,
   disabled = false,
+  active = false,
   onClick,
 }: {
   children: ReactNode;
@@ -1474,6 +1989,8 @@ function MessageAction({
   label: string;
 
   disabled?: boolean;
+
+  active?: boolean;
 
   onClick: () => void;
 }) {
@@ -1485,7 +2002,7 @@ function MessageAction({
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
-      className="
+      className={`
         flex
         h-7
         w-7
@@ -1495,9 +2012,6 @@ function MessageAction({
         rounded-full
 
         border-0
-        bg-transparent
-
-        text-white/28
 
         !outline-none
 
@@ -1512,7 +2026,13 @@ function MessageAction({
 
         disabled:cursor-not-allowed
         disabled:opacity-25
-      "
+
+        ${
+          active
+            ? "bg-white/[0.07] text-white/80"
+            : "bg-transparent text-white/28"
+        }
+      `}
     >
       {children}
     </button>
