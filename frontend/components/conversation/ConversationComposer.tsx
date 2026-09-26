@@ -389,6 +389,8 @@ export default function ConversationComposer() {
       "generating" ||
     activity ===
       "retrying" ||
+    activity ===
+      "streaming" ||
     transcribing ||
     generatingImage;
 
