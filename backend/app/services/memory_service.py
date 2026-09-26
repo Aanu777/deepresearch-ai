@@ -644,6 +644,111 @@ Limit to at most 4 memories.
         )
 
     # ========================================================
+    # USER CONTROLS
+    # ========================================================
+
+    async def list_memories(
+        self,
+        *,
+        access_token: str,
+    ) -> list[
+        dict[str, Any]
+    ]:
+
+        async with httpx.AsyncClient(
+            timeout=8.0
+        ) as client:
+
+            response = await client.get(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?select="
+                    + "id,kind,content,confidence,"
+                    + "importance,source_type,"
+                    + "created_at,updated_at"
+                    + "&is_active=eq.true"
+                    + "&order=importance.desc,"
+                    + "updated_at.desc"
+                    + "&limit=200"
+                ),
+                headers=self._headers(
+                    access_token
+                ),
+            )
+
+        response.raise_for_status()
+
+        payload = response.json()
+
+        if not isinstance(
+            payload,
+            list,
+        ):
+            return []
+
+        return [
+            item
+            for item in payload
+            if isinstance(
+                item,
+                dict,
+            )
+        ]
+
+    async def delete_memory(
+        self,
+        *,
+        access_token: str,
+        memory_id: str,
+    ) -> None:
+
+        async with httpx.AsyncClient(
+            timeout=8.0
+        ) as client:
+
+            response = await client.delete(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?id=eq."
+                    + memory_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+            )
+
+        response.raise_for_status()
+
+    async def clear_memories(
+        self,
+        *,
+        user_id: str,
+        access_token: str,
+    ) -> None:
+
+        async with httpx.AsyncClient(
+            timeout=8.0
+        ) as client:
+
+            response = await client.delete(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?user_id=eq."
+                    + user_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+            )
+
+        response.raise_for_status()
+
+    # ========================================================
     # PERSISTENCE
     # ========================================================
 
