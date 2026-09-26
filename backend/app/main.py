@@ -2,6 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
+from app.core.payload_crypto import (
+    validate_payload_crypto_config,
+)
 from app.middleware.payload_encryption import (
     PayloadEncryptionMiddleware,
 )
@@ -14,6 +17,9 @@ from app.api.v1.websocket import router as websocket_router
 # ============================================================
 # APPLICATION
 # ============================================================
+
+validate_payload_crypto_config()
+
 
 app = FastAPI(
     title="DeepResearch AI",
@@ -53,8 +59,19 @@ app.add_middleware(
 
 
 # ============================================================
-# ROOT
+# ROOT / HEALTH
 # ============================================================
+
+@app.get("/health")
+async def health():
+
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "payload_encryption_required":
+            settings.PAYLOAD_ENCRYPTION_REQUIRED,
+    }
+
 
 @app.get("/")
 async def root():
