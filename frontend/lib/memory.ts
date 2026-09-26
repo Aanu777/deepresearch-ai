@@ -39,16 +39,7 @@ export async function getMemories():
         "user_memories"
       )
       .select(
-        [
-          "id",
-          "kind",
-          "content",
-          "confidence",
-          "importance",
-          "source_type",
-          "created_at",
-          "updated_at",
-        ].join(",")
+        "id,kind,content,confidence,importance,source_type,created_at,updated_at"
       )
       .eq(
         "is_active",
