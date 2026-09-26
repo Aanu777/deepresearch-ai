@@ -330,6 +330,10 @@ Limit to at most 4 memories.
                 dict[str, Any]
             ] = []
 
+            semantic_lookup_failed = (
+                False
+            )
+
             try:
                 embedding = await self._embed(
                     query[:12_000]
@@ -379,6 +383,10 @@ Limit to at most 4 memories.
                     ]
 
             except Exception:
+                semantic_lookup_failed = (
+                    True
+                )
+
                 logger.exception(
                     "Semantic vector lookup failed; "
                     "using durable-memory fallback."
@@ -446,20 +454,26 @@ Limit to at most 4 memories.
                 ):
                     continue
 
-                if (
-                    not recall_query
-                    and semantic_rows
-                ):
-                    importance = float(
-                        row.get(
-                            "importance",
-                            0.0,
+                if not recall_query:
+                    if (
+                        not semantic_rows
+                        and not (
+                            semantic_lookup_failed
                         )
-                        or 0.0
-                    )
-
-                    if importance < 0.75:
+                    ):
                         continue
+
+                    if semantic_rows:
+                        importance = float(
+                            row.get(
+                                "importance",
+                                0.0,
+                            )
+                            or 0.0
+                        )
+
+                        if importance < 0.75:
+                            continue
 
                 selected.append(
                     row
