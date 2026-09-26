@@ -1177,7 +1177,7 @@ function TextMessage({
                     feedbackOpen
                   )
                     ? "opacity-100"
-                    : "opacity-0 group-hover/message:opacity-100 focus-within:opacity-100"
+                    : "opacity-100 sm:opacity-0 sm:group-hover/message:opacity-100 sm:focus-within:opacity-100"
                 }
 
                 ${
@@ -2029,7 +2029,7 @@ function MessageAction({
 
         ${
           active
-            ? "bg-white/[0.07] text-white/78"
+            ? "bg-white/[0.07] text-white/80"
             : "bg-transparent text-white/28"
         }
       `}
