@@ -52,6 +52,14 @@ class Settings(BaseSettings):
     )
 
     # ========================================================
+    # APPLICATION-LAYER PAYLOAD ENCRYPTION
+    # ========================================================
+
+    PAYLOAD_PRIVATE_KEY_B64: str = ""
+
+    PAYLOAD_ENCRYPTION_REQUIRED: bool = True
+
+    # ========================================================
     # AUTHENTICATION — SUPABASE
     # ========================================================
 
