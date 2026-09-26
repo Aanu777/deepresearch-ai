@@ -437,10 +437,10 @@ class LLMService:
 
     _PROVIDER_SAFETY_LINE = re.compile(
         (
-            r"(?im)^\\s*User Safety:\\s*"
-            r"(?:safe|unsafe)\\s+"
-            r"Response Safety:\\s*"
-            r"(?:safe|unsafe)\\s*$"
+            r"(?im)^\s*User Safety:\s*"
+            r"(?:safe|unsafe)\s+"
+            r"Response Safety:\s*"
+            r"(?:safe|unsafe)\s*$"
         )
     )
 
