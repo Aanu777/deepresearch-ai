@@ -430,17 +430,17 @@ Limit to at most 4 memories.
         text = raw.strip()
 
         if text.startswith(
-            "\`\`\`"
+            "```"
         ):
             text = re.sub(
-                r"^\`\`\`(?:json)?\s*",
+                r"^```(?:json)?\s*",
                 "",
                 text,
                 flags=re.IGNORECASE,
             )
 
             text = re.sub(
-                r"\s*\`\`\`$",
+                r"\s*```$",
                 "",
                 text,
             )
