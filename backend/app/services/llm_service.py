@@ -512,10 +512,13 @@ class LLMService:
 
     _PROVIDER_SAFETY_LINE = re.compile(
         (
-            r"(?im)^\s*User Safety:\s*"
-            r"(?:safe|unsafe)\s+"
-            r"Response Safety:\s*"
-            r"(?:safe|unsafe)\s*$"
+            r"(?im)^\s*(?:"
+            r"User Safety:\s*(?:safe|unsafe)"
+            r"(?:\s+Response Safety:\s*(?:safe|unsafe))?"
+            r"|"
+            r"Response Safety:\s*(?:safe|unsafe)"
+            r"(?:\s+User Safety:\s*(?:safe|unsafe))?"
+            r")\s*$"
         )
     )
 
@@ -555,12 +558,14 @@ class LLMService:
                 content
             )
 
-        if not (
+        has_safety_label = (
             "User Safety:"
             in text
-            and "Response Safety:"
+            or "Response Safety:"
             in text
-        ):
+        )
+
+        if not has_safety_label:
             return False
 
         return not (
