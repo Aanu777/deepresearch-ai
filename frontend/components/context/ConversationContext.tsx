@@ -40,6 +40,7 @@ export type ConversationActivity =
   | "generating_image"
   | "playing"
   | "retrying"
+  | "streaming"
   | "error";
 
 
@@ -68,6 +69,13 @@ type ConversationContextType = {
 
   sending:
     boolean;
+
+  streamingMessageId:
+    string | null;
+
+  finishStreamingMessage: (
+    messageId: string
+  ) => void;
 
   activity:
     ConversationActivity;
@@ -306,6 +314,16 @@ export function ConversationProvider({
     );
 
   const [
+    streamingMessageId,
+    setStreamingMessageId,
+  ] =
+    useState<
+      string | null
+    >(
+      null
+    );
+
+  const [
     error,
     setError,
   ] =
@@ -343,6 +361,7 @@ export function ConversationProvider({
       "transcribing",
       "generating_image",
       "retrying",
+      "streaming",
     ].includes(
       activity
     );
@@ -728,7 +747,15 @@ export function ConversationProvider({
       "idle"
     );
 
+    setStreamingMessageId(
+      null
+    );
+
     setSelectedImageForEdit(
+      null
+    );
+
+    setStreamingMessageId(
       null
     );
 
@@ -920,21 +947,36 @@ export function ConversationProvider({
 
       assistant_message:
         ConversationMessage;
-    }
+    },
+    optimisticMessageId?:
+      string
   ) {
 
     setMessages(
       (
         previous
-      ) => [
-        ...previous,
+      ) => {
+        const retained =
+          optimisticMessageId
+            ? previous.filter(
+                (
+                  message
+                ) =>
+                  message.message_id !==
+                  optimisticMessageId
+              )
+            : previous;
 
-        response
-          .user_message,
+        return [
+          ...retained,
 
-        response
-          .assistant_message,
-      ]
+          response
+            .user_message,
+
+          response
+            .assistant_message,
+        ];
+      }
     );
 
 
@@ -945,6 +987,77 @@ export function ConversationProvider({
 
     moveChatToTop(
       response.chat
+    );
+  }
+
+
+  function createOptimisticUserMessage(
+    chatId: string,
+    content: string
+  ): ConversationMessage {
+    return {
+      message_id:
+        `optimistic-${crypto.randomUUID()}`,
+
+      chat_id:
+        chatId,
+
+      role:
+        "user",
+
+      message_type:
+        "text",
+
+      content,
+
+      image_url:
+        null,
+
+      image_prompt:
+        null,
+
+      image_operation:
+        null,
+
+      image_provider:
+        null,
+
+      image_model:
+        null,
+
+      image_media_type:
+        null,
+
+      parent_image_id:
+        null,
+
+      created_at:
+        new Date().toISOString(),
+    };
+  }
+
+
+  function finishStreamingMessage(
+    messageId: string
+  ) {
+    setStreamingMessageId(
+      (
+        current
+      ) =>
+        current ===
+        messageId
+          ? null
+          : current
+    );
+
+    setActivity(
+      (
+        current
+      ) =>
+        current ===
+        "streaming"
+          ? "idle"
+          : current
     );
   }
 
@@ -1010,6 +1123,21 @@ export function ConversationProvider({
     const chatId =
       await ensureChat();
 
+    const optimisticMessage =
+      createOptimisticUserMessage(
+        chatId,
+        trimmed
+      );
+
+    setMessages(
+      (
+        previous
+      ) => [
+        ...previous,
+        optimisticMessage,
+      ]
+    );
+
 
     setSending(
       true
@@ -1038,12 +1166,19 @@ export function ConversationProvider({
 
 
       applyMessageResponse(
-        response
+        response,
+        optimisticMessage
+          .message_id
       );
 
+      setStreamingMessageId(
+        response
+          .assistant_message
+          .message_id
+      );
 
       setActivity(
-        "idle"
+        "streaming"
       );
 
     } catch (
@@ -1054,6 +1189,24 @@ export function ConversationProvider({
         caught
       );
 
+
+      setMessages(
+        (
+          previous
+        ) =>
+          previous.filter(
+            (
+              message
+            ) =>
+              message.message_id !==
+              optimisticMessage
+                .message_id
+          )
+      );
+
+      setStreamingMessageId(
+        null
+      );
 
       setConversationError(
         getErrorMessage(
@@ -1280,6 +1433,22 @@ export function ConversationProvider({
     const chatId =
       await ensureChat();
 
+    const optimisticMessage =
+      createOptimisticUserMessage(
+        chatId,
+        content.trim() ||
+          "Analyze the attached files."
+      );
+
+    setMessages(
+      (
+        previous
+      ) => [
+        ...previous,
+        optimisticMessage,
+      ]
+    );
+
 
     setSending(
       true
@@ -1309,12 +1478,19 @@ export function ConversationProvider({
 
 
       applyMessageResponse(
-        response
+        response,
+        optimisticMessage
+          .message_id
       );
 
+      setStreamingMessageId(
+        response
+          .assistant_message
+          .message_id
+      );
 
       setActivity(
-        "idle"
+        "streaming"
       );
 
     } catch (
@@ -1325,6 +1501,24 @@ export function ConversationProvider({
         caught
       );
 
+
+      setMessages(
+        (
+          previous
+        ) =>
+          previous.filter(
+            (
+              message
+            ) =>
+              message.message_id !==
+              optimisticMessage
+                .message_id
+          )
+      );
+
+      setStreamingMessageId(
+        null
+      );
 
       setConversationError(
         getErrorMessage(
@@ -1640,6 +1834,10 @@ export function ConversationProvider({
         historyLoading,
 
         sending,
+
+        streamingMessageId,
+
+        finishStreamingMessage,
 
         activity,
 
