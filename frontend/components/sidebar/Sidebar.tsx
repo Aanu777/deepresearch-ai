@@ -874,6 +874,9 @@ export default function Sidebar({
         isConversation={
           isConversation
         }
+        isMemory={
+          isMemory
+        }
         search={
           search
         }
@@ -921,6 +924,9 @@ export default function Sidebar({
         }
         openConversation={
           openConversation
+        }
+        openMemory={
+          openMemory
         }
         openResearchChat={
           openResearchChat
