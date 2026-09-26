@@ -254,122 +254,193 @@ class LLMService:
                 status_code=503,
             ) from exc
 
-        content = (
-            response
-            .choices[0]
-            .message
-            .content
-        )
-
-        normalized = (
-            self._normalize_content(
-                content
-            )
-        )
-
-        if (
-            not normalized
-            and self._is_provider_safety_artifact(
-                content
-            )
-        ):
-            logger.warning(
-                "OpenRouter returned provider safety metadata "
-                "instead of an assistant answer; retrying once "
-                "(model=%s).",
-                selected_model,
-            )
-
-            retry_messages = list(
-                prepared_messages
-            )
-
-            retry_instruction = {
-                "role": "system",
-                "content": (
-                    "Return only the assistant answer intended "
-                    "for the user. Do not output provider safety "
-                    "labels, moderation metadata, classifier "
-                    "results, or internal routing information."
-                ),
-            }
-
-            insert_at = (
-                1
-                if (
-                    retry_messages
-                    and retry_messages[0].get(
-                        "role"
-                    )
-                    == "system"
+        try:
+            content = (
+                self
+                ._extract_response_content(
+                    response
                 )
-                else 0
-            )
-
-            retry_messages.insert(
-                insert_at,
-                retry_instruction,
-            )
-
-            try:
-                retry_response = (
-                    create_completion(
-                        selected_model,
-                        retry_messages,
-                    )
-                )
-
-            except APIStatusError as retry_exc:
-                self._raise_provider_error(
-                    retry_exc,
-                    selected_model,
-                    len(retry_messages),
-                )
-
-            except Exception as retry_exc:
-                logger.exception(
-                    "OpenRouter safety-artifact retry failed "
-                    "(model=%s, message_count=%s).",
-                    selected_model,
-                    len(retry_messages),
-                )
-
-                raise LLMProviderError(
-                    (
-                        "The AI service request failed. "
-                        "Please try again."
-                    ),
-                    status_code=503,
-                ) from retry_exc
-
-            retry_content = (
-                retry_response
-                .choices[0]
-                .message
-                .content
             )
 
             normalized = (
                 self._normalize_content(
-                    retry_content
+                    content
                 )
             )
 
             if (
                 not normalized
                 and self._is_provider_safety_artifact(
-                    retry_content
+                    content
                 )
             ):
+                logger.warning(
+                    "OpenRouter returned provider safety metadata "
+                    "instead of an assistant answer; retrying once "
+                    "(model=%s).",
+                    selected_model,
+                )
+
+                retry_messages = list(
+                    prepared_messages
+                )
+
+                retry_instruction = {
+                    "role": "system",
+                    "content": (
+                        "Return only the assistant answer intended "
+                        "for the user. Do not output provider safety "
+                        "labels, moderation metadata, classifier "
+                        "results, or internal routing information."
+                    ),
+                }
+
+                insert_at = (
+                    1
+                    if (
+                        retry_messages
+                        and retry_messages[0].get(
+                            "role"
+                        )
+                        == "system"
+                    )
+                    else 0
+                )
+
+                retry_messages.insert(
+                    insert_at,
+                    retry_instruction,
+                )
+
+                try:
+                    retry_response = (
+                        create_completion(
+                            selected_model,
+                            retry_messages,
+                        )
+                    )
+
+                except APIStatusError as retry_exc:
+                    self._raise_provider_error(
+                        retry_exc,
+                        selected_model,
+                        len(retry_messages),
+                    )
+
+                except Exception as retry_exc:
+                    logger.exception(
+                        "OpenRouter safety-artifact retry failed "
+                        "(model=%s, message_count=%s).",
+                        selected_model,
+                        len(retry_messages),
+                    )
+
+                    raise LLMProviderError(
+                        (
+                            "The AI service request failed. "
+                            "Please try again."
+                        ),
+                        status_code=503,
+                    ) from retry_exc
+
+                retry_content = (
+                    self
+                    ._extract_response_content(
+                        retry_response
+                    )
+                )
+
+                normalized = (
+                    self._normalize_content(
+                        retry_content
+                    )
+                )
+
+                if (
+                    not normalized
+                    and self._is_provider_safety_artifact(
+                        retry_content
+                    )
+                ):
+                    raise LLMProviderError(
+                        (
+                            "The AI provider returned an unusable "
+                            "response. Please try again."
+                        ),
+                        status_code=502,
+                    )
+
+            if not normalized:
                 raise LLMProviderError(
                     (
-                        "The AI provider returned an unusable "
+                        "The AI provider returned an empty "
                         "response. Please try again."
                     ),
                     status_code=502,
                 )
 
-        return normalized
+            return normalized
+
+        except LLMProviderError:
+            raise
+
+        except Exception as exc:
+            logger.exception(
+                "OpenRouter response processing failed "
+                "(model=%s, message_count=%s).",
+                selected_model,
+                len(prepared_messages),
+            )
+
+            raise LLMProviderError(
+                (
+                    "The AI provider returned an unusable "
+                    "response. Please try again."
+                ),
+                status_code=502,
+            ) from exc
+
+    @staticmethod
+    def _extract_response_content(
+        response: Any,
+    ) -> Any:
+
+        choices = getattr(
+            response,
+            "choices",
+            None,
+        )
+
+        if not choices:
+            raise LLMProviderError(
+                (
+                    "The AI provider returned no response "
+                    "choices. Please try again."
+                ),
+                status_code=502,
+            )
+
+        message = getattr(
+            choices[0],
+            "message",
+            None,
+        )
+
+        if message is None:
+            raise LLMProviderError(
+                (
+                    "The AI provider returned an invalid "
+                    "response. Please try again."
+                ),
+                status_code=502,
+            )
+
+        return getattr(
+            message,
+            "content",
+            None,
+        )
+
 
     @staticmethod
     def _raise_provider_error(
