@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  isValidElement,
   useEffect,
   useRef,
   useState,
@@ -1148,53 +1149,119 @@ function AssistantMarkdown({
 
           code: ({
             children,
-          }) => (
-            <code
-              className="
-                rounded-md
+            className,
+          }) => {
+            if (
+              typeof className ===
+                "string" &&
+              className.startsWith(
+                "language-"
+              )
+            ) {
+              return (
+                <code
+                  className={
+                    className
+                  }
+                >
+                  {children}
+                </code>
+              );
+            }
 
-                bg-white/[0.08]
+            return (
+              <code
+                className="
+                  rounded-md
 
-                px-1.5
-                py-0.5
+                  bg-white/[0.08]
 
-                font-mono
-                text-[13px]
-                text-white/90
-              "
-            >
-              {children}
-            </code>
-          ),
+                  px-1.5
+                  py-0.5
+
+                  font-mono
+                  text-[13px]
+                  text-white/90
+                "
+              >
+                {children}
+              </code>
+            );
+          },
 
           pre: ({
             children,
-          }) => (
-            <pre
-              className="
-                my-3
+          }) => {
+            const child =
+              Array.isArray(
+                children
+              )
+                ? children[0]
+                : children;
 
-                overflow-x-auto
+            if (
+              isValidElement(
+                child
+              )
+            ) {
+              const props =
+                child.props as {
+                  className?: string;
+                  children?:
+                    ReactNode;
+                };
 
-                rounded-2xl
+              const className =
+                props.className ??
+                "";
 
-                border
-                border-white/[0.08]
+              const language =
+                className.startsWith(
+                  "language-"
+                )
+                  ? className.slice(
+                      "language-"
+                      .length
+                    )
+                  : "code";
 
-                bg-[#151515]
+              const code =
+                String(
+                  props.children ??
+                  ""
+                ).replace(
+                  /\n$/,
+                  ""
+                );
 
-                p-4
+              return (
+                <CodeCard
+                  code={code}
+                  language={
+                    language
+                  }
+                />
+              );
+            }
 
-                text-[13px]
-                leading-6
-
-                [&_code]:bg-transparent
-                [&_code]:p-0
-              "
-            >
-              {children}
-            </pre>
-          ),
+            return (
+              <pre
+                className="
+                  my-3
+                  overflow-x-auto
+                  rounded-2xl
+                  border
+                  border-white/[0.08]
+                  bg-[#151515]
+                  p-4
+                  text-[13px]
+                  leading-6
+                "
+              >
+                {children}
+              </pre>
+            );
+          },
 
           a: ({
             children,
@@ -1234,6 +1301,159 @@ function AssistantMarkdown({
       >
         {content}
       </ReactMarkdown>
+    </div>
+  );
+}
+
+
+/* ============================================================
+   CODE CARD
+   ============================================================ */
+
+function CodeCard({
+  code,
+  language,
+}: {
+  code: string;
+  language: string;
+}) {
+
+  const [
+    copied,
+    setCopied,
+  ] =
+    useState(false);
+
+
+  async function copyCode() {
+    try {
+      await navigator
+        .clipboard
+        .writeText(
+          code
+        );
+
+      setCopied(
+        true
+      );
+
+      window.setTimeout(
+        () => {
+          setCopied(
+            false
+          );
+        },
+        1400
+      );
+
+    } catch (
+      error
+    ) {
+      console.error(
+        "Failed to copy code:",
+        error
+      );
+    }
+  }
+
+
+  return (
+    <div
+      className="
+        my-4
+        overflow-hidden
+        rounded-2xl
+        border
+        border-white/[0.09]
+        bg-[#111111]
+        shadow-[0_12px_36px_rgba(0,0,0,0.18)]
+      "
+    >
+      <div
+        className="
+          flex
+          h-10
+          items-center
+          justify-between
+          border-b
+          border-white/[0.07]
+          bg-white/[0.025]
+          px-4
+        "
+      >
+        <span
+          className="
+            font-mono
+            text-[11px]
+            lowercase
+            tracking-wide
+            text-white/38
+          "
+        >
+          {language}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => {
+            void copyCode();
+          }}
+          className="
+            inline-flex
+            h-7
+            items-center
+            gap-1.5
+            rounded-lg
+            px-2
+            text-[11px]
+            text-white/42
+            transition
+            hover:bg-white/[0.06]
+            hover:text-white/80
+            focus:outline-none
+            focus-visible:ring-1
+            focus-visible:ring-white/20
+          "
+        >
+          {copied ? (
+            <Check
+              size={13}
+              strokeWidth={1.9}
+            />
+          ) : (
+            <Copy
+              size={13}
+              strokeWidth={1.7}
+            />
+          )}
+
+          <span>
+            {copied
+              ? "Copied"
+              : "Copy code"}
+          </span>
+        </button>
+      </div>
+
+      <pre
+        className="
+          overflow-x-auto
+          px-4
+          py-4
+          text-[13px]
+          leading-6
+          text-white/88
+          [tab-size:2]
+        "
+      >
+        <code
+          className="
+            font-mono
+          "
+        >
+          {code}
+        </code>
+      </pre>
     </div>
   );
 }
