@@ -231,6 +231,42 @@ Limit to at most 4 memories.
     # RETRIEVAL
     # ========================================================
 
+    async def _has_memories(
+        self,
+        access_token: str,
+    ) -> bool:
+
+        async with httpx.AsyncClient(
+            timeout=4.0
+        ) as client:
+
+            response = await client.get(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?select=id"
+                    + "&is_active=eq.true"
+                    + "&limit=1"
+                ),
+                headers=self._headers(
+                    access_token
+                ),
+            )
+
+        response.raise_for_status()
+
+        rows = response.json()
+
+        return (
+            isinstance(
+                rows,
+                list,
+            )
+            and bool(
+                rows
+            )
+        )
+
     async def relevant_context(
         self,
         *,
@@ -245,6 +281,11 @@ Limit to at most 4 memories.
             return ""
 
         try:
+            if not await self._has_memories(
+                access_token
+            ):
+                return ""
+
             embedding = await self._embed(
                 query[:12_000]
             )
