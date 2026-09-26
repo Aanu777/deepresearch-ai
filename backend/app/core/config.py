@@ -81,7 +81,7 @@ class Settings(BaseSettings):
 
     MEMORY_TOP_K: int = 6
 
-    MEMORY_MIN_SIMILARITY: float = 0.30
+    MEMORY_MIN_SIMILARITY: float = 0.18
 
     MEMORY_EXTRACTION_MODEL: str = (
         "openrouter/free"
