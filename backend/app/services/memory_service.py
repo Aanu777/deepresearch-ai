@@ -314,33 +314,33 @@ Limit to at most 4 memories.
             return ""
 
         try:
-            stored_memories = (
-                await self
-                .list_memories(
-                    access_token=(
-                        access_token
-                    ),
+            recall_query = (
+                self
+                ._looks_like_recall_query(
+                    query
                 )
             )
 
-            if not stored_memories:
-                return ""
+            if recall_query:
+                selected = (
+                    await self
+                    .list_memories(
+                        access_token=(
+                            access_token
+                        ),
+                    )
+                )[
+                    :settings
+                    .MEMORY_TOP_K
+                ]
 
-            semantic_rows: list[
-                dict[str, Any]
-            ] = []
-
-            semantic_lookup_failed = (
-                False
-            )
-
-            try:
+            else:
                 embedding = await self._embed(
                     query[:12_000]
                 )
 
                 async with httpx.AsyncClient(
-                    timeout=8.0
+                    timeout=3.0
                 ) as client:
 
                     response = await client.post(
@@ -369,11 +369,8 @@ Limit to at most 4 memories.
 
                 payload = response.json()
 
-                if isinstance(
-                    payload,
-                    list,
-                ):
-                    semantic_rows = [
+                selected = (
+                    [
                         row
                         for row in payload
                         if isinstance(
@@ -381,123 +378,11 @@ Limit to at most 4 memories.
                             dict,
                         )
                     ]
-
-            except Exception:
-                semantic_lookup_failed = (
-                    True
-                )
-
-                logger.exception(
-                    "Semantic vector lookup failed; "
-                    "using durable-memory fallback."
-                )
-
-            selected: list[
-                dict[str, Any]
-            ] = []
-
-            seen_ids: set[str] = set()
-
-            for row in semantic_rows:
-                memory_id = str(
-                    row.get(
-                        "id",
-                        "",
+                    if isinstance(
+                        payload,
+                        list,
                     )
-                )
-
-                if memory_id:
-                    seen_ids.add(
-                        memory_id
-                    )
-
-                selected.append(
-                    row
-                )
-
-            recall_query = (
-                self
-                ._looks_like_recall_query(
-                    query
-                )
-            )
-
-            fallback_limit = (
-                settings
-                .MEMORY_TOP_K
-                if recall_query
-                else 2
-            )
-
-            for row in stored_memories:
-
-                if (
-                    len(selected)
-                    >= (
-                        settings
-                        .MEMORY_TOP_K
-                    )
-                ):
-                    break
-
-                memory_id = str(
-                    row.get(
-                        "id",
-                        "",
-                    )
-                )
-
-                if (
-                    memory_id
-                    and memory_id
-                    in seen_ids
-                ):
-                    continue
-
-                if not recall_query:
-                    if (
-                        not semantic_rows
-                        and not (
-                            semantic_lookup_failed
-                        )
-                    ):
-                        continue
-
-                    if semantic_rows:
-                        importance = float(
-                            row.get(
-                                "importance",
-                                0.0,
-                            )
-                            or 0.0
-                        )
-
-                        if importance < 0.75:
-                            continue
-
-                selected.append(
-                    row
-                )
-
-                if memory_id:
-                    seen_ids.add(
-                        memory_id
-                    )
-
-                fallback_limit -= 1
-
-                if fallback_limit <= 0:
-                    break
-
-            if (
-                not selected
-                and recall_query
-            ):
-                selected = (
-                    stored_memories[
-                        :settings
-                        .MEMORY_TOP_K
-                    ]
+                    else []
                 )
 
             memories: list[str] = []
