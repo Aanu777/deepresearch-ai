@@ -24,6 +24,10 @@ import {
 } from "@/lib/conversation";
 
 import {
+  usePathname,
+} from "next/navigation";
+
+import {
   createClient,
 } from "@/lib/supabase/client";
 
@@ -205,6 +209,9 @@ export function ConversationProvider({
   /* ==========================================================
      SUPABASE
      ========================================================== */
+
+  const pathname =
+    usePathname();
 
   const supabase =
     createClient();
@@ -702,12 +709,21 @@ export function ConversationProvider({
         return;
       }
 
+      if (
+        !pathname?.startsWith(
+          "/conversation"
+        )
+      ) {
+        return;
+      }
+
 
       refreshChats();
     },
     [
       authInitialized,
       authenticated,
+      pathname,
     ]
   );
 
