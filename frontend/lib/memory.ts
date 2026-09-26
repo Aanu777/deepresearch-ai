@@ -3,6 +3,22 @@ import {
 } from "@/lib/supabase/client";
 
 
+const SUPABASE_URL =
+  (
+    process.env
+      .NEXT_PUBLIC_SUPABASE_URL ??
+    ""
+  ).replace(
+    /\/$/,
+    ""
+  );
+
+const SUPABASE_KEY =
+  process.env
+    .NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  "";
+
+
 export type UserMemory = {
   id: string;
   kind:
@@ -24,8 +40,15 @@ export type UserMemory = {
 };
 
 
-export async function getMemories():
-  Promise<UserMemory[]> {
+async function authHeaders() {
+  if (
+    !SUPABASE_URL ||
+    !SUPABASE_KEY
+  ) {
+    throw new Error(
+      "Supabase is not configured."
+    );
+  }
 
   const supabase =
     createClient();
@@ -34,34 +57,8 @@ export async function getMemories():
     data,
     error,
   } =
-    await supabase
-      .from(
-        "user_memories"
-      )
-      .select(
-        "id,kind,content,confidence,importance,source_type,created_at,updated_at"
-      )
-      .eq(
-        "is_active",
-        true
-      )
-      .order(
-        "importance",
-        {
-          ascending:
-            false,
-        }
-      )
-      .order(
-        "updated_at",
-        {
-          ascending:
-            false,
-        }
-      )
-      .limit(
-        200
-      );
+    await supabase.auth
+      .getSession();
 
   if (error) {
     throw new Error(
@@ -69,60 +66,176 @@ export async function getMemories():
     );
   }
 
+  const accessToken =
+    data.session
+      ?.access_token;
+
+  if (!accessToken) {
+    throw new Error(
+      "You are not signed in."
+    );
+  }
+
+  return {
+    apikey:
+      SUPABASE_KEY,
+
+    Authorization:
+      `Bearer ${accessToken}`,
+
+    "Content-Type":
+      "application/json",
+  };
+}
+
+
+async function readError(
+  response: Response
+) {
+  try {
+    const payload =
+      await response.json();
+
+    if (
+      typeof payload?.message ===
+        "string"
+    ) {
+      return payload.message;
+    }
+
+    if (
+      typeof payload?.error ===
+        "string"
+    ) {
+      return payload.error;
+    }
+
+  } catch {
+    // Fall through.
+  }
+
   return (
-    data ??
-    []
-  ) as UserMemory[];
+    `Memory request failed (${response.status}).`
+  );
+}
+
+
+export async function getMemories():
+  Promise<UserMemory[]> {
+
+  const headers =
+    await authHeaders();
+
+  const params =
+    new URLSearchParams({
+      select:
+        "id,kind,content,confidence,importance,source_type,created_at,updated_at",
+
+      is_active:
+        "eq.true",
+
+      order:
+        "importance.desc,updated_at.desc",
+
+      limit:
+        "200",
+    });
+
+  const response =
+    await fetch(
+      (
+        `${SUPABASE_URL}/rest/v1/user_memories?`
+        + params.toString()
+      ),
+      {
+        headers,
+        cache:
+          "no-store",
+      }
+    );
+
+  if (!response.ok) {
+    throw new Error(
+      await readError(
+        response
+      )
+    );
+  }
+
+  const payload =
+    await response.json();
+
+  return Array.isArray(
+    payload
+  )
+    ? payload as UserMemory[]
+    : [];
 }
 
 
 export async function deleteMemory(
   memoryId: string
 ) {
-  const supabase =
-    createClient();
+  const headers =
+    await authHeaders();
 
-  const {
-    error,
-  } =
-    await supabase
-      .from(
-        "user_memories"
-      )
-      .delete()
-      .eq(
-        "id",
-        memoryId
-      );
+  const response =
+    await fetch(
+      (
+        `${SUPABASE_URL}/rest/v1/user_memories`
+        + `?id=eq.${encodeURIComponent(
+          memoryId
+        )}`
+      ),
+      {
+        method:
+          "DELETE",
 
-  if (error) {
+        headers: {
+          ...headers,
+          Prefer:
+            "return=minimal",
+        },
+      }
+    );
+
+  if (!response.ok) {
     throw new Error(
-      error.message
+      await readError(
+        response
+      )
     );
   }
 }
 
 
 export async function clearMemories() {
-  const supabase =
-    createClient();
+  const headers =
+    await authHeaders();
 
-  const {
-    error,
-  } =
-    await supabase
-      .from(
-        "user_memories"
-      )
-      .delete()
-      .eq(
-        "is_active",
-        true
-      );
+  const response =
+    await fetch(
+      (
+        `${SUPABASE_URL}/rest/v1/user_memories`
+        + "?is_active=eq.true"
+      ),
+      {
+        method:
+          "DELETE",
 
-  if (error) {
+        headers: {
+          ...headers,
+          Prefer:
+            "return=minimal",
+        },
+      }
+    );
+
+  if (!response.ok) {
     throw new Error(
-      error.message
+      await readError(
+        response
+      )
     );
   }
 }
