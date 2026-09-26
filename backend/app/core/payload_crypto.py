@@ -167,6 +167,15 @@ def _private_key():
     return key
 
 
+def validate_payload_crypto_config() -> None:
+
+    if (
+        settings
+        .PAYLOAD_ENCRYPTION_REQUIRED
+    ):
+        _private_key()
+
+
 def unwrap_request_key(
     wrapped_key: str,
 ) -> bytes:

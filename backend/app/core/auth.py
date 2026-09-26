@@ -79,11 +79,6 @@ async def get_current_user(
 
     token = credentials.credentials
 
-    print(
-        "AUTHORIZATION HEADER RECEIVED:"
-        " Bearer token present"
-    )
-
     # ========================================================
     # READ JWT HEADER
     # ========================================================
@@ -94,22 +89,7 @@ async def get_current_user(
             token
         )
 
-        print(
-            "SUPABASE JWT HEADER:",
-            {
-                "alg": header.get("alg"),
-                "kid": header.get("kid"),
-                "typ": header.get("typ"),
-            },
-        )
-
     except JWTError as exc:
-
-        print(
-            "JWT HEADER ERROR:",
-            type(exc).__name__,
-            str(exc),
-        )
 
         raise HTTPException(
             status_code=401,
@@ -123,11 +103,6 @@ async def get_current_user(
     algorithm = header.get("alg")
 
     if algorithm != "ES256":
-
-        print(
-            "UNSUPPORTED JWT ALGORITHM:",
-            algorithm,
-        )
 
         raise HTTPException(
             status_code=401,
@@ -147,12 +122,6 @@ async def get_current_user(
         raise
 
     except Exception as exc:
-
-        print(
-            "JWKS ERROR:",
-            type(exc).__name__,
-            str(exc),
-        )
 
         raise HTTPException(
             status_code=503,
@@ -179,11 +148,6 @@ async def get_current_user(
 
     if signing_key is None:
 
-        print(
-            "JWT SIGNING KEY NOT FOUND:",
-            key_id,
-        )
-
         raise HTTPException(
             status_code=401,
             detail=(
@@ -209,12 +173,6 @@ async def get_current_user(
 
     except JWTError as exc:
 
-        print(
-            "SUPABASE JWT ERROR:",
-            type(exc).__name__,
-            str(exc),
-        )
-
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired authentication token.",
@@ -228,11 +186,6 @@ async def get_current_user(
 
     if not user_id:
 
-        print(
-            "SUPABASE JWT ERROR:"
-            " Token does not contain 'sub'."
-        )
-
         raise HTTPException(
             status_code=401,
             detail=(
@@ -244,11 +197,6 @@ async def get_current_user(
     # ========================================================
     # SUCCESS
     # ========================================================
-
-    print(
-        "AUTHENTICATED USER:",
-        user_id,
-    )
 
     return AuthenticatedUser(
         user_id=user_id
