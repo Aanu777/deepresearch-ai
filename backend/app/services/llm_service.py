@@ -627,177 +627,122 @@ class LLMService:
         ):
             return text
 
-        pattern = re.compile(
+        header = re.search(
             (
-                r"<\|tool_call_start\|>\s*"
+                r"(?:<\|tool_call_start\|>\s*)?"
                 r"\[?write\("
                 r"path=(?P<quote>['\"])"
                 r"(?P<path>.+?)"
                 r"(?P=quote)\s*,\s*"
                 r"content=(?P<cquote>['\"])"
-                r"(?P<content>.*)"
-                r"(?P=cquote)\s*\)"
-                r"\]?\s*"
-                r"(?:<\|tool_call_end\|>)?"
             ),
-            re.DOTALL,
+            text,
+            flags=re.DOTALL,
         )
 
-        match = pattern.search(
-            text
-        )
-
-        if match is None:
-            header = re.search(
-                (
-                    r"(?:<\|tool_call_start\|>\s*)?"
-                    r"\[?write\("
-                    r"path=(?P<quote>['\"])"
-                    r"(?P<path>.+?)"
-                    r"(?P=quote)\s*,\s*"
-                    r"content=(?P<cquote>['\"])"
-                ),
-                text,
-                flags=re.DOTALL,
-            )
-
-            if header is None:
-                return (
-                    text
-                    .replace(
-                        "<|tool_call_start|>",
-                        ""
-                    )
-                    .replace(
-                        "<|tool_call_end|>",
-                        ""
-                    )
-                    .strip()
-                )
-
-            before = (
-                text[
-                    :header.start()
-                ]
-                .strip()
-            )
-
-            path = (
-                header
-                .group(
-                    "path"
-                )
-                .strip()
-            )
-
-            raw_content = (
-                text[
-                    header.end():
-                ]
-            )
-
-            raw_content = re.sub(
-                (
-                    r"\s*['\"]?\)?\]?\s*"
-                    r"(?:<\|tool_call_end\|>)?\s*$"
-                ),
-                "",
-                raw_content,
-                flags=re.DOTALL,
-            )
-
-            decoded_content = (
-                raw_content
-                .replace(
-                    "\\r\\n",
-                    "\n"
-                )
-                .replace(
-                    "\\n",
-                    "\n"
-                )
-                .replace(
-                    "\\t",
-                    "\t"
-                )
-                .replace(
-                    "\\\"",
-                    "\""
-                )
-                .replace(
-                    "\\'",
-                    "'"
-                )
-            )
-
-            language = (
-                cls
-                ._normalize_language_from_path(
-                    path
-                )
-            )
-
-            code_block = (
-                f"**{path}**\n\n"
-                f"```{language}\n"
-                f"{decoded_content.rstrip()}\n"
-                f"```"
-            )
-
+        if header is None:
             return (
-                "\n\n".join(
-                    part
-                    for part
-                    in [
-                        before,
-                        code_block,
-                    ]
-                    if part
+                text
+                .replace(
+                    "<|tool_call_start|>",
+                    ""
                 )
+                .replace(
+                    "<|tool_call_end|>",
+                    ""
+                )
+                .strip()
             )
 
         before = (
             text[
-                :match.start()
+                :header.start()
             ]
             .strip()
         )
 
         path = (
-            match
+            header
             .group(
                 "path"
             )
             .strip()
         )
 
-        raw_content = (
-            match
+        content_quote = (
+            header
             .group(
-                "content"
+                "cquote"
             )
         )
 
-        try:
-            decoded_content = bytes(
+        tool_end_token = (
+            "<|tool_call_end|>"
+        )
+
+        tool_end = text.find(
+            tool_end_token,
+            header.end(),
+        )
+
+        if tool_end >= 0:
+            raw_content = text[
+                header.end():
+                tool_end
+            ]
+
+            raw_content = re.sub(
+                (
+                    re.escape(
+                        content_quote
+                    )
+                    + r"\s*\)\s*\]?\s*$"
+                ),
+                "",
                 raw_content,
-                "utf-8",
-            ).decode(
-                "unicode_escape"
+                flags=re.DOTALL,
             )
 
-        except Exception:
-            decoded_content = (
-                raw_content
-                .replace(
-                    "\\n",
-                    "\n"
-                )
-                .replace(
-                    "\\t",
-                    "\t"
-                )
+            after = (
+                text[
+                    tool_end
+                    + len(
+                        tool_end_token
+                    ):
+                ]
+                .strip()
             )
+
+        else:
+            raw_content = text[
+                header.end():
+            ]
+
+            after = ""
+
+        decoded_content = (
+            raw_content
+            .replace(
+                "\\r\\n",
+                "\n"
+            )
+            .replace(
+                "\\n",
+                "\n"
+            )
+            .replace(
+                "\\t",
+                "\t"
+            )
+            .replace(
+                "\\\"",
+                "\""
+            )
+            .replace(
+                "\\'",
+                "'"
+            )
+        )
 
         language = (
             cls
@@ -813,26 +758,17 @@ class LLMService:
             f"```"
         )
 
-        after = (
-            text[
-                match.end():
-            ]
-            .strip()
-        )
-
-        parts = [
-            part
-            for part
-            in [
-                before,
-                code_block,
-                after,
-            ]
-            if part
-        ]
-
-        return "\n\n".join(
-            parts
+        return (
+            "\n\n".join(
+                part
+                for part
+                in [
+                    before,
+                    code_block,
+                    after,
+                ]
+                if part
+            )
         )
 
     # ========================================================
