@@ -1,4 +1,5 @@
 import logging
+import re
 
 from typing import Any
 
@@ -139,11 +140,20 @@ class LLMService:
 
         def create_completion(
             model_name: str,
+            request_messages: list[
+                dict[str, Any]
+            ] | None = None,
         ):
+            messages_to_send = (
+                request_messages
+                if request_messages is not None
+                else prepared_messages
+            )
+
             return (
                 self.client.chat.completions.create(
                     model=model_name,
-                    messages=prepared_messages,  # type: ignore[arg-type]
+                    messages=messages_to_send,  # type: ignore[arg-type]
                     temperature=temperature,
                     max_tokens=(
                         settings
@@ -251,9 +261,115 @@ class LLMService:
             .content
         )
 
-        return self._normalize_content(
-            content
+        normalized = (
+            self._normalize_content(
+                content
+            )
         )
+
+        if (
+            not normalized
+            and self._is_provider_safety_artifact(
+                content
+            )
+        ):
+            logger.warning(
+                "OpenRouter returned provider safety metadata "
+                "instead of an assistant answer; retrying once "
+                "(model=%s).",
+                selected_model,
+            )
+
+            retry_messages = list(
+                prepared_messages
+            )
+
+            retry_instruction = {
+                "role": "system",
+                "content": (
+                    "Return only the assistant answer intended "
+                    "for the user. Do not output provider safety "
+                    "labels, moderation metadata, classifier "
+                    "results, or internal routing information."
+                ),
+            }
+
+            insert_at = (
+                1
+                if (
+                    retry_messages
+                    and retry_messages[0].get(
+                        "role"
+                    )
+                    == "system"
+                )
+                else 0
+            )
+
+            retry_messages.insert(
+                insert_at,
+                retry_instruction,
+            )
+
+            try:
+                retry_response = (
+                    create_completion(
+                        selected_model,
+                        retry_messages,
+                    )
+                )
+
+            except APIStatusError as retry_exc:
+                self._raise_provider_error(
+                    retry_exc,
+                    selected_model,
+                    len(retry_messages),
+                )
+
+            except Exception as retry_exc:
+                logger.exception(
+                    "OpenRouter safety-artifact retry failed "
+                    "(model=%s, message_count=%s).",
+                    selected_model,
+                    len(retry_messages),
+                )
+
+                raise LLMProviderError(
+                    (
+                        "The AI service request failed. "
+                        "Please try again."
+                    ),
+                    status_code=503,
+                ) from retry_exc
+
+            retry_content = (
+                retry_response
+                .choices[0]
+                .message
+                .content
+            )
+
+            normalized = (
+                self._normalize_content(
+                    retry_content
+                )
+            )
+
+            if (
+                not normalized
+                and self._is_provider_safety_artifact(
+                    retry_content
+                )
+            ):
+                raise LLMProviderError(
+                    (
+                        "The AI provider returned an unusable "
+                        "response. Please try again."
+                    ),
+                    status_code=502,
+                )
+
+        return normalized
 
     @staticmethod
     def _raise_provider_error(
@@ -319,11 +435,71 @@ class LLMService:
             status_code=502,
         ) from exc
 
+    _PROVIDER_SAFETY_LINE = re.compile(
+        (
+            r"(?im)^\s*User Safety:\s*"
+            r"(?:safe|unsafe)\s+"
+            r"Response Safety:\s*"
+            r"(?:safe|unsafe)\s*$"
+        )
+    )
+
+    @classmethod
+    def _strip_provider_safety_metadata(
+        cls,
+        text: str,
+    ) -> str:
+
+        return (
+            cls
+            ._PROVIDER_SAFETY_LINE
+            .sub(
+                "",
+                text,
+            )
+            .strip()
+        )
+
+    @classmethod
+    def _is_provider_safety_artifact(
+        cls,
+        content: Any,
+    ) -> bool:
+
+        if content is None:
+            return False
+
+        if isinstance(
+            content,
+            str,
+        ):
+            text = content
+
+        else:
+            text = str(
+                content
+            )
+
+        if not (
+            "User Safety:"
+            in text
+            and "Response Safety:"
+            in text
+        ):
+            return False
+
+        return not (
+            cls
+            ._strip_provider_safety_metadata(
+                text
+            )
+        )
+
     # ========================================================
     # NORMALIZE OUTPUT
     # ========================================================
 
-    @staticmethod
+    @classmethod
     def _normalize_content(
         content: Any,
     ) -> str:
@@ -335,7 +511,12 @@ class LLMService:
             content,
             str,
         ):
-            return content.strip()
+            return (
+                cls
+                ._strip_provider_safety_metadata(
+                    content
+                )
+            )
 
         # Some multimodal providers may return
         # structured response parts.
@@ -376,13 +557,22 @@ class LLMService:
                         )
 
             return (
-                "\n".join(parts)
-                .strip()
+                cls
+                ._strip_provider_safety_metadata(
+                    "\n".join(
+                        parts
+                    )
+                )
             )
 
-        return str(
-            content
-        ).strip()
+        return (
+            cls
+            ._strip_provider_safety_metadata(
+                str(
+                    content
+                )
+            )
+        )
 
 
 llm_service = LLMService()
