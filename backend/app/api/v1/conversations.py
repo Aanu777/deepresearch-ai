@@ -1822,6 +1822,9 @@ async def edit_message(
     request:
         EditMessageRequest,
 
+    background_tasks:
+        BackgroundTasks,
+
     current_user: (
         AuthenticatedUser
     ) = Depends(
@@ -2039,6 +2042,14 @@ async def edit_message(
         )
     )
 
+    llm_messages = (
+        await add_relevant_memory_context(
+            llm_messages,
+            current_user=current_user,
+            query=content,
+        )
+    )
+
     # ========================================================
     # REGENERATE
     # ========================================================
@@ -2182,6 +2193,25 @@ async def edit_message(
 
     chat_store.update(
         chat
+    )
+
+    background_tasks.add_task(
+        memory_service
+        .learn_from_exchange,
+        user_id=(
+            current_user
+            .user_id
+        ),
+        access_token=(
+            current_user
+            .access_token
+        ),
+        user_message=content,
+        source_id=chat_id,
+        source_message_id=(
+            edited_message
+            .message_id
+        ),
     )
 
     return {
