@@ -87,6 +87,8 @@ function TextMessage({
   const {
     editMessage,
     sending,
+    streamingMessageId,
+    finishStreamingMessage,
   } =
     useConversation();
 
@@ -94,6 +96,11 @@ function TextMessage({
   const isUser =
     message.role ===
     "user";
+
+  const isStreaming =
+    !isUser &&
+    streamingMessageId ===
+      message.message_id;
 
 
   const [
@@ -110,6 +117,135 @@ function TextMessage({
     useState(
       message.content
     );
+
+
+  const [
+    displayedContent,
+    setDisplayedContent,
+  ] =
+    useState(
+      message.content
+    );
+
+
+  useEffect(
+    () => {
+      if (
+        !isStreaming
+      ) {
+        setDisplayedContent(
+          message.content
+        );
+
+        return;
+      }
+
+      const fullContent =
+        message.content;
+
+      if (!fullContent) {
+        finishStreamingMessage(
+          message.message_id
+        );
+
+        return;
+      }
+
+      setDisplayedContent(
+        ""
+      );
+
+      const totalCharacters =
+        fullContent.length;
+
+      const duration =
+        Math.min(
+          4800,
+          Math.max(
+            900,
+            totalCharacters * 7
+          )
+        );
+
+      const startedAt =
+        performance.now();
+
+      let frameId =
+        0;
+
+      function reveal(
+        now: number
+      ) {
+        const elapsed =
+          now - startedAt;
+
+        const progress =
+          Math.min(
+            1,
+            elapsed / duration
+          );
+
+        const eased =
+          1 -
+          Math.pow(
+            1 - progress,
+            2
+          );
+
+        const visibleCharacters =
+          Math.min(
+            totalCharacters,
+            Math.max(
+              1,
+              Math.floor(
+                totalCharacters *
+                eased
+              )
+            )
+          );
+
+        setDisplayedContent(
+          fullContent.slice(
+            0,
+            visibleCharacters
+          )
+        );
+
+        if (
+          visibleCharacters <
+          totalCharacters
+        ) {
+          frameId =
+            requestAnimationFrame(
+              reveal
+            );
+
+          return;
+        }
+
+        finishStreamingMessage(
+          message.message_id
+        );
+      }
+
+      frameId =
+        requestAnimationFrame(
+          reveal
+        );
+
+      return () => {
+        cancelAnimationFrame(
+          frameId
+        );
+      };
+    },
+    [
+      finishStreamingMessage,
+      isStreaming,
+      message.content,
+      message.message_id,
+    ]
+  );
 
 
   const [
@@ -737,7 +873,7 @@ function TextMessage({
         ) : (
           <AssistantMarkdown
             content={
-              message.content
+              displayedContent
             }
           />
         )}
@@ -747,6 +883,7 @@ function TextMessage({
             ACTIONS
             ================================================== */}
 
+        {!isStreaming && (
         <div
           className={`
             mt-1
@@ -810,6 +947,7 @@ function TextMessage({
             </MessageAction>
           )}
         </div>
+        )}
       </div>
     </div>
   );
