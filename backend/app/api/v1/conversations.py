@@ -12,6 +12,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     UploadFile,
 )
 
@@ -23,6 +24,9 @@ from app.core.auth import (
 )
 
 from app.core.config import settings
+from app.core.payload_crypto import (
+    decrypt_form_value,
+)
 
 from app.models.chat import Chat
 from app.models.message import ChatMessage
@@ -2127,6 +2131,7 @@ async def edit_message(
 )
 async def send_message_with_attachments(
     chat_id: str,
+    request: Request,
 
     content: str = Form(
         default=""
@@ -2170,7 +2175,12 @@ async def send_message_with_attachments(
     )
 
     user_content = (
-        content.strip()
+        decrypt_form_value(
+            content,
+            request,
+            "content",
+        )
+        .strip()
     )
 
     display_content = (
