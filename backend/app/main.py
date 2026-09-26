@@ -32,11 +32,33 @@ app = FastAPI(
 # CORS
 # ============================================================
 
-cors_origins = [
+configured_cors_origins = {
     origin.strip()
     for origin in settings.CORS_ORIGINS.split(",")
     if origin.strip()
-]
+}
+
+required_cors_origins = {
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://deepresearch-ai-nu.vercel.app",
+    "https://deepresearch-ai-ayan-a664.vercel.app",
+    "https://deepresearch-ai-git-main-ayan-a664.vercel.app",
+}
+
+cors_origins = sorted(
+    configured_cors_origins
+    | required_cors_origins
+)
+
+local_dev_origin_regex = (
+    r"^http://(?:localhost|127\.0\.0\.1)(?::\d+)?$"
+)
+
+cors_origin_regex = (
+    rf"(?:{settings.CORS_ORIGIN_REGEX})"
+    rf"|(?:{local_dev_origin_regex})"
+)
 
 
 app.add_middleware(
@@ -47,7 +69,7 @@ app.add_middleware(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
-    allow_origin_regex=settings.CORS_ORIGIN_REGEX,
+    allow_origin_regex=cors_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
