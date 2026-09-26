@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -1037,29 +1038,33 @@ export function ConversationProvider({
   }
 
 
-  function finishStreamingMessage(
-    messageId: string
-  ) {
-    setStreamingMessageId(
+  const finishStreamingMessage =
+    useCallback(
       (
-        current
-      ) =>
-        current ===
-        messageId
-          ? null
-          : current
-    );
+        messageId: string
+      ) => {
+        setStreamingMessageId(
+          (
+            current
+          ) =>
+            current ===
+            messageId
+              ? null
+              : current
+        );
 
-    setActivity(
-      (
-        current
-      ) =>
-        current ===
-        "streaming"
-          ? "idle"
-          : current
+        setActivity(
+          (
+            current
+          ) =>
+            current ===
+            "streaming"
+              ? "idle"
+              : current
+        );
+      },
+      []
     );
-  }
 
 
   /* ==========================================================
