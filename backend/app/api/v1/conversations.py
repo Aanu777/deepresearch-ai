@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import uuid
 
@@ -528,16 +529,26 @@ async def add_relevant_memory_context(
     ]
 ]:
 
-    memory_context = (
-        await memory_service
-        .relevant_context(
-            access_token=(
-                current_user
-                .access_token
-            ),
-            query=query,
+    try:
+        memory_context = (
+            await asyncio.wait_for(
+                memory_service
+                .relevant_context(
+                    access_token=(
+                        current_user
+                        .access_token
+                    ),
+                    query=query,
+                ),
+                timeout=(
+                    settings
+                    .MEMORY_RETRIEVAL_TIMEOUT_SECONDS
+                ),
+            )
         )
-    )
+
+    except asyncio.TimeoutError:
+        memory_context = ""
 
     if not memory_context:
         return messages
