@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Form,
@@ -50,6 +51,10 @@ from app.services.media_service import (
 
 from app.services.message_store import (
     message_store,
+)
+
+from app.services.memory_service import (
+    memory_service,
 )
 
 
@@ -504,6 +509,53 @@ def build_llm_messages(
         )
 
     return result
+
+
+async def add_relevant_memory_context(
+    messages: list[
+        dict[
+            str,
+            Any,
+        ]
+    ],
+    *,
+    current_user: AuthenticatedUser,
+    query: str,
+) -> list[
+    dict[
+        str,
+        Any,
+    ]
+]:
+
+    memory_context = (
+        await memory_service
+        .relevant_context(
+            access_token=(
+                current_user
+                .access_token
+            ),
+            query=query,
+        )
+    )
+
+    if not memory_context:
+        return messages
+
+    return [
+        {
+            "role":
+                "system",
+
+            "content": (
+                llm_service
+                .default_system_prompt
+                + "\n\n"
+                + memory_context
+            ),
+        },
+        *messages,
+    ]
 
 
 # ============================================================
