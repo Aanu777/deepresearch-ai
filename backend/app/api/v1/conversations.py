@@ -2020,6 +2020,18 @@ async def submit_message_feedback(
             ),
         ) from exc
 
+    background_tasks.add_task(
+        memory_service
+        .remove_corrections_for_source,
+        access_token=(
+            current_user
+            .access_token
+        ),
+        source_message_id=(
+            message_id
+        ),
+    )
+
     if (
         request.rating
         == "down"
