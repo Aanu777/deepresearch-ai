@@ -456,6 +456,35 @@ class TrainingDataService:
             )
         ]
 
+    async def remove_source_examples(
+        self,
+        *,
+        access_token: str,
+        source_type: str,
+        source_id: str,
+    ) -> None:
+
+        async with httpx.AsyncClient(
+            timeout=6.0
+        ) as client:
+
+            response = await client.delete(
+                (
+                    self._rest_base
+                    + "/training_examples"
+                    + "?source_type=eq."
+                    + source_type
+                    + "&source_id=eq."
+                    + source_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+            )
+
+        response.raise_for_status()
+
     async def delete_example(
         self,
         *,
