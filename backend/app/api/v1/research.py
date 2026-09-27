@@ -200,6 +200,7 @@ async def create_research_job(
         research_service.run_research,
         job.job_id,
         research_query,
+        current_user.access_token,
     )
 
     return ResearchResponse(
@@ -265,6 +266,7 @@ async def ask_research_question(
         research_service.run_research,
         job_id,
         query,
+        current_user.access_token,
     )
 
     return ResearchResponse(
