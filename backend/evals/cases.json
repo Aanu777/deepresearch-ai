@@ -1,0 +1,171 @@
+{
+  "offline": [
+    {
+      "id": "provider_safety_combined",
+      "category": "provider_cleanup",
+      "type": "normalize",
+      "input": "User Safety: safe Response Safety: safe",
+      "checks": {
+        "empty": true
+      }
+    },
+    {
+      "id": "provider_safety_user_only",
+      "category": "provider_cleanup",
+      "type": "normalize",
+      "input": "User Safety: safe",
+      "checks": {
+        "empty": true
+      }
+    },
+    {
+      "id": "provider_safety_response_only",
+      "category": "provider_cleanup",
+      "type": "normalize",
+      "input": "Response Safety: safe",
+      "checks": {
+        "empty": true
+      }
+    },
+    {
+      "id": "provider_safety_attached_to_answer",
+      "category": "provider_cleanup",
+      "type": "normalize",
+      "input": "Here is the answer.\n\nUser Safety: safe",
+      "checks": {
+        "equals": "Here is the answer.",
+        "forbidden": [
+          "User Safety:",
+          "Response Safety:"
+        ]
+      }
+    },
+    {
+      "id": "tool_markup_python",
+      "category": "code_formatting",
+      "type": "normalize",
+      "input": "Here is the file.\n<|tool_call_start|>[write(path='calculator.py', content='print(\"hello\")\\n')]<|tool_call_end|>",
+      "checks": {
+        "contains": [
+          "**calculator.py**",
+          "```python",
+          "print(\"hello\")"
+        ],
+        "forbidden": [
+          "<|tool_call_start|>",
+          "<|tool_call_end|>",
+          "write(path="
+        ]
+      }
+    },
+    {
+      "id": "memory_candidate_parser",
+      "category": "memory_parsing",
+      "type": "memory_candidates",
+      "input": "[{\"kind\":\"preference\",\"content\":\"Prefers concise technical answers.\",\"confidence\":0.92,\"importance\":0.8}]",
+      "checks": {
+        "count": 1,
+        "first_kind": "preference",
+        "first_content": "Prefers concise technical answers."
+      }
+    },
+    {
+      "id": "memory_candidate_low_confidence_rejected",
+      "category": "memory_parsing",
+      "type": "memory_candidates",
+      "input": "[{\"kind\":\"fact\",\"content\":\"Likes a temporary random detail.\",\"confidence\":0.4,\"importance\":0.2}]",
+      "checks": {
+        "count": 0
+      }
+    },
+    {
+      "id": "consolidation_merge_parser",
+      "category": "memory_consolidation",
+      "type": "consolidation_decision",
+      "input": "{\"action\":\"merge\",\"merged_content\":\"Prefers concise technical answers.\"}",
+      "checks": {
+        "action": "merge",
+        "merged_content": "Prefers concise technical answers."
+      }
+    },
+    {
+      "id": "consolidation_invalid_action_rejected",
+      "category": "memory_consolidation",
+      "type": "consolidation_decision",
+      "input": "{\"action\":\"delete_everything\",\"merged_content\":null}",
+      "checks": {
+        "null": true
+      }
+    }
+  ],
+  "live": [
+    {
+      "id": "live_python_calculator",
+      "category": "code_generation",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Create a complete but compact command-line calculator in Python. Put the code in a normal Markdown fenced code block."
+        }
+      ],
+      "checks": {
+        "min_chars": 120,
+        "contains": [
+          "```"
+        ],
+        "forbidden": [
+          "<|tool_call_start|>",
+          "<|tool_call_end|>",
+          "User Safety:",
+          "Response Safety:"
+        ]
+      },
+      "max_latency_ms": 45000
+    },
+    {
+      "id": "live_plain_explanation",
+      "category": "conversation_quality",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Explain what an API is in 3 short paragraphs for a beginner."
+        }
+      ],
+      "checks": {
+        "min_chars": 80,
+        "forbidden": [
+          "<|tool_call_start|>",
+          "<|tool_call_end|>",
+          "User Safety:",
+          "Response Safety:"
+        ]
+      },
+      "max_latency_ms": 45000
+    },
+    {
+      "id": "live_markdown_code_contract",
+      "category": "code_generation",
+      "messages": [
+        {
+          "role": "user",
+          "content": "Show a Python function named add(a, b) that returns the sum. Use Markdown code fencing and no tool-call syntax."
+        }
+      ],
+      "checks": {
+        "min_chars": 30,
+        "contains": [
+          "```",
+          "def add"
+        ],
+        "forbidden": [
+          "<|tool_call_start|>",
+          "<|tool_call_end|>",
+          "write(path=",
+          "User Safety:",
+          "Response Safety:"
+        ]
+      },
+      "max_latency_ms": 45000
+    }
+  ]
+}
