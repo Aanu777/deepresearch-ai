@@ -1399,6 +1399,52 @@ Keep merged_content under 500 characters.
             ):
                 return
 
+            merged_normalized = (
+                self._normalize(
+                    merged_content
+                )
+            )
+
+            if (
+                merged_normalized
+                == self._normalize(
+                    existing_content
+                )
+            ):
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        candidate_id
+                    ),
+                    superseded_by=(
+                        existing_id
+                    ),
+                )
+
+                return
+
+            if (
+                merged_normalized
+                == self._normalize(
+                    content
+                )
+            ):
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        existing_id
+                    ),
+                    superseded_by=(
+                        candidate_id
+                    ),
+                )
+
+                return
+
             merged_embedding = (
                 await self._embed(
                     merged_content
