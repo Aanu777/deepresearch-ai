@@ -33,7 +33,13 @@ class SearchAgent:
         # ========================================================
 
         results = search_tool.search(
-            state["query"]
+            state["query"],
+            preferred_domains=(
+                state.get(
+                    "preferred_domains",
+                    [],
+                )
+            ),
         )
 
         state["search_results"] = (
