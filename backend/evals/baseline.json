@@ -10,7 +10,8 @@
       "memory_consolidation": 1,
       "code_generation": 0.8,
       "conversation_quality": 0.8,
-      "source_learning": 1
+      "source_learning": 1,
+      "training_data": 1
     }
   }
 }
