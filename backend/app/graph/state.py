@@ -72,6 +72,8 @@ class ResearchState(TypedDict):
 
     search_results: list
 
+    preferred_domains: list[str]
+
     # ========================================================
     # EXTRACTION
     # ========================================================

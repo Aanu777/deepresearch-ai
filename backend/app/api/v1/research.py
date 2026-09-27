@@ -1,4 +1,6 @@
 from io import BytesIO
+from typing import Literal
+from urllib.parse import urlparse
 
 from fastapi import (
     APIRouter,
@@ -10,6 +12,8 @@ from fastapi import (
     Request,
     UploadFile,
 )
+
+from pydantic import BaseModel
 
 from app.core.auth import (
     AuthenticatedUser,
@@ -29,8 +33,74 @@ from app.services.research_service import (
     research_service,
 )
 
+from app.services.research_feedback_service import (
+    research_feedback_service,
+)
+
+from app.services.memory_service import (
+    memory_service,
+)
+
 
 router = APIRouter()
+
+
+class ResearchFeedbackRequest(
+    BaseModel
+):
+    rating: Literal[
+        "up",
+        "down",
+    ]
+
+    reason: (
+        Literal[
+            "incorrect",
+            "incomplete",
+            "bad_sources",
+            "outdated",
+            "too_verbose",
+            "too_brief",
+            "formatting",
+            "other",
+        ]
+        | None
+    ) = None
+
+    correction: (
+        str | None
+    ) = None
+
+
+def source_domains(
+    urls: list[str],
+) -> list[str]:
+
+    domains: set[str] = set()
+
+    for url in urls:
+        try:
+            domain = (
+                urlparse(
+                    url
+                )
+                .hostname
+                or ""
+            ).lower().removeprefix(
+                "www."
+            )
+
+        except Exception:
+            domain = ""
+
+        if domain:
+            domains.add(
+                domain
+            )
+
+    return sorted(
+        domains
+    )
 
 
 # ============================================================
@@ -200,6 +270,7 @@ async def create_research_job(
         research_service.run_research,
         job.job_id,
         research_query,
+        current_user.access_token,
     )
 
     return ResearchResponse(
@@ -265,6 +336,7 @@ async def ask_research_question(
         research_service.run_research,
         job_id,
         query,
+        current_user.access_token,
     )
 
     return ResearchResponse(
@@ -272,6 +344,187 @@ async def ask_research_question(
         status="queued",
         message="Research question added successfully.",
     )
+
+
+# ============================================================
+# RESEARCH REPORT FEEDBACK
+# ============================================================
+
+
+@router.post(
+    "/{job_id}/feedback"
+)
+async def submit_research_feedback(
+    job_id: str,
+
+    request:
+        ResearchFeedbackRequest,
+
+    background_tasks:
+        BackgroundTasks,
+
+    current_user: AuthenticatedUser = Depends(
+        get_current_user
+    ),
+):
+    job = (
+        research_service
+        .get_user_job(
+            job_id,
+            current_user.user_id,
+        )
+    )
+
+    if job is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Research job not found.",
+        )
+
+    if not job.report.strip():
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Feedback can only be submitted "
+                "after a report is generated."
+            ),
+        )
+
+    correction = (
+        request.correction.strip()
+        if request.correction
+        else None
+    )
+
+    if (
+        correction
+        and len(
+            correction
+        ) > 4000
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Research correction is too long."
+            ),
+        )
+
+    reason = (
+        request.reason
+        if request.rating
+        == "down"
+        else None
+    )
+
+    if request.rating == "up":
+        correction = None
+
+    domains = source_domains(
+        [
+            source.url
+            for source
+            in job.sources
+            if source.url
+        ]
+    )
+
+    rating_value = (
+        1
+        if request.rating
+        == "up"
+        else -1
+    )
+
+    try:
+        await research_feedback_service.upsert(
+            user_id=(
+                current_user.user_id
+            ),
+            access_token=(
+                current_user.access_token
+            ),
+            job_id=job_id,
+            rating=rating_value,
+            reason=reason,
+            correction=correction,
+            source_domains=domains,
+            metadata={
+                "source_count":
+                    len(
+                        job.sources
+                    ),
+
+                "research_status":
+                    job.status,
+
+                "quality_score":
+                    job.metrics.confidence,
+            },
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Research feedback could not "
+                "be saved right now."
+            ),
+        ) from exc
+
+    correction_source_id = (
+        f"research:{job_id}"
+    )
+
+    background_tasks.add_task(
+        memory_service
+        .remove_corrections_for_source,
+        access_token=(
+            current_user.access_token
+        ),
+        source_message_id=(
+            correction_source_id
+        ),
+    )
+
+    if (
+        request.rating == "down"
+        and correction
+    ):
+        background_tasks.add_task(
+            memory_service
+            .learn_from_correction,
+            user_id=(
+                current_user.user_id
+            ),
+            access_token=(
+                current_user.access_token
+            ),
+            correction=correction,
+            source_id=job_id,
+            source_message_id=(
+                correction_source_id
+            ),
+            context=job.query,
+            source_type="research",
+        )
+
+    return {
+        "saved":
+            True,
+
+        "rating":
+            request.rating,
+
+        "source_domains":
+            domains,
+
+        "correction_learning":
+            bool(
+                request.rating
+                == "down"
+                and correction
+            ),
+    }
 
 
 # ============================================================

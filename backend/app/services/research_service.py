@@ -9,6 +9,10 @@ from app.models.research_job import (
     ResearchJob,
     ResearchQuestion,
 )
+
+from app.services.research_feedback_service import (
+    research_feedback_service,
+)
 from app.services.job_store import job_store
 from app.state.job_state_manager import JobStateManager
 
@@ -428,6 +432,7 @@ class ResearchService:
         self,
         job_id: str,
         query: str,
+        access_token: str | None = None,
     ):
         job = job_store.get(
             job_id
@@ -512,6 +517,23 @@ class ResearchService:
                 )
 
             # ====================================================
+            # LEARNED SOURCE PREFERENCES
+            # ====================================================
+
+            preferred_domains: list[str] = []
+
+            if access_token:
+                preferred_domains = (
+                    research_feedback_service
+                    .preferred_domains(
+                        access_token=(
+                            access_token
+                        ),
+                        limit=3,
+                    )
+                )
+
+            # ====================================================
             # INITIAL LANGGRAPH STATE
             # ====================================================
 
@@ -536,6 +558,9 @@ class ResearchService:
                 "plan": [],
 
                 "search_results": [],
+
+                "preferred_domains":
+                    preferred_domains,
 
                 "extracted_information": [],
 

@@ -554,6 +554,7 @@ Limit to at most 4 memories.
         source_id: str,
         source_message_id: str,
         context: str | None = None,
+        source_type: str = "conversation",
     ) -> None:
 
         if not settings.MEMORY_ENABLED:
@@ -603,6 +604,9 @@ Limit to at most 4 memories.
 
                     "importance":
                         0.95,
+
+                    "source_type":
+                        source_type,
                 },
                 source_id=source_id,
                 source_message_id=(
@@ -994,7 +998,12 @@ Limit to at most 4 memories.
                             ],
 
                         "source_type":
-                            "conversation",
+                            str(
+                                candidate.get(
+                                    "source_type",
+                                    "conversation",
+                                )
+                            ),
 
                         "source_id":
                             source_id,
