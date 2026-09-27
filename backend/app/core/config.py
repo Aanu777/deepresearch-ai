@@ -89,6 +89,14 @@ class Settings(BaseSettings):
         "openrouter/free"
     )
 
+    MEMORY_CONSOLIDATION_ENABLED: bool = True
+
+    MEMORY_CONSOLIDATION_MIN_SIMILARITY: float = 0.88
+
+    MEMORY_CONSOLIDATION_MODEL: str = (
+        "openrouter/free"
+    )
+
     # ========================================================
     # SPEECH TO TEXT — DEEPGRAM
     # ========================================================
