@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "thresholds": {
+    "offline_overall": 1,
+    "live_overall": 0.8,
+    "categories": {
+      "provider_cleanup": 1,
+      "code_formatting": 1,
+      "memory_parsing": 1,
+      "memory_consolidation": 1,
+      "code_generation": 0.8,
+      "conversation_quality": 0.8,
+      "source_learning": 1
+    }
+  }
+}

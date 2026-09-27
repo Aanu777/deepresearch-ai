@@ -31,32 +31,16 @@ class SearchTool:
         except Exception:
             return ""
 
-    def search(
+    def soft_rerank(
         self,
-        query: str,
-        *,
-        preferred_domains: list[str] | None = None,
-    ):
+        items: list,
+        preferred_domains: list[str] | None,
+    ) -> list:
 
-        results = client.search(
-            query=query,
-            search_depth="advanced",
-            max_results=5,
-        )
-
-        items = results.get(
-            "results",
-            [],
-        )
-
-        if not (
-            isinstance(
-                items,
-                list,
+        if not preferred_domains:
+            return list(
+                items
             )
-            and preferred_domains
-        ):
-            return results
 
         preferred = {
             domain
@@ -108,11 +92,40 @@ class SearchTool:
 
             return 1
 
-        results[
-            "results"
-        ] = sorted(
+        return sorted(
             items,
             key=preference_rank,
+        )
+
+    def search(
+        self,
+        query: str,
+        *,
+        preferred_domains: list[str] | None = None,
+    ):
+
+        results = client.search(
+            query=query,
+            search_depth="advanced",
+            max_results=5,
+        )
+
+        items = results.get(
+            "results",
+            [],
+        )
+
+        if not isinstance(
+            items,
+            list,
+        ):
+            return results
+
+        results[
+            "results"
+        ] = self.soft_rerank(
+            items,
+            preferred_domains,
         )
 
         return results
