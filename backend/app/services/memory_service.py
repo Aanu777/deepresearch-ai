@@ -1572,6 +1572,15 @@ Keep merged_content under 500 characters.
                         "source_message_id":
                             source_message_id,
 
+                        "is_active":
+                            True,
+
+                        "superseded_by":
+                            None,
+
+                        "consolidated_at":
+                            None,
+
                         "updated_at":
                             datetime.now(
                                 timezone.utc
