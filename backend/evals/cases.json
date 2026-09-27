@@ -96,6 +96,39 @@
       "checks": {
         "null": true
       }
+    },
+    {
+      "id": "source_preference_soft_rerank",
+      "category": "source_learning",
+      "type": "source_rerank",
+      "input": {
+        "items": [
+          {
+            "title": "Generic source",
+            "url": "https://example.com/article"
+          },
+          {
+            "title": "Preferred source",
+            "url": "https://docs.python.org/3/tutorial/"
+          },
+          {
+            "title": "Another source",
+            "url": "https://another.example/report"
+          }
+        ],
+        "preferred_domains": [
+          "python.org"
+        ]
+      },
+      "checks": {
+        "count": 3,
+        "first_url_contains": "python.org",
+        "preserve_urls": [
+          "https://example.com/article",
+          "https://docs.python.org/3/tutorial/",
+          "https://another.example/report"
+        ]
+      }
     }
   ],
   "live": [
