@@ -456,6 +456,56 @@ class TrainingDataService:
             )
         ]
 
+    async def delete_example(
+        self,
+        *,
+        access_token: str,
+        example_id: str,
+    ) -> None:
+
+        async with httpx.AsyncClient(
+            timeout=6.0
+        ) as client:
+
+            response = await client.delete(
+                (
+                    self._rest_base
+                    + "/training_examples"
+                    + "?id=eq."
+                    + example_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+            )
+
+        response.raise_for_status()
+
+    async def clear_examples(
+        self,
+        *,
+        access_token: str,
+    ) -> None:
+
+        async with httpx.AsyncClient(
+            timeout=8.0
+        ) as client:
+
+            response = await client.delete(
+                (
+                    self._rest_base
+                    + "/training_examples"
+                    + "?id=not.is.null"
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+            )
+
+        response.raise_for_status()
+
     @staticmethod
     def split_for_hash(
         content_hash: str,
