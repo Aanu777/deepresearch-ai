@@ -129,6 +129,115 @@
           "https://another.example/report"
         ]
       }
+    },
+    {
+      "id": "training_redaction_pipeline",
+      "category": "training_data",
+      "type": "training_prepare",
+      "input": {
+        "source_type": "conversation",
+        "source_id": "message-1",
+        "prompt": "Contact ayan@example.com and use api_key=sk-example-secret for this demo.",
+        "rejected_response": "My phone is +92 300 1234567.",
+        "target_response": "Use Bearer abcdefghijklmnop safely and do not expose credentials.",
+        "feedback_reason": "incorrect"
+      },
+      "checks": {
+        "not_null": true,
+        "min_redactions": 4,
+        "prompt_contains": [
+          "[REDACTED_EMAIL]",
+          "[REDACTED_SECRET]"
+        ],
+        "rejected_contains": [
+          "[REDACTED_PHONE]"
+        ],
+        "target_contains": [
+          "Bearer [REDACTED_TOKEN]"
+        ],
+        "hash_length": 64
+      }
+    },
+    {
+      "id": "training_identical_target_rejected",
+      "category": "training_data",
+      "type": "training_prepare",
+      "input": {
+        "source_type": "conversation",
+        "source_id": "message-2",
+        "prompt": "Explain APIs.",
+        "rejected_response": "An API lets software communicate.",
+        "target_response": "An API lets software communicate.",
+        "feedback_reason": "other"
+      },
+      "checks": {
+        "null": true
+      }
+    },
+    {
+      "id": "training_validation_split_deterministic",
+      "category": "training_data",
+      "type": "training_split",
+      "input": {
+        "content_hash": "00000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "checks": {
+        "equals": "validation"
+      }
+    },
+    {
+      "id": "training_train_split_deterministic",
+      "category": "training_data",
+      "type": "training_split",
+      "input": {
+        "content_hash": "ffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "checks": {
+        "equals": "train"
+      }
+    },
+    {
+      "id": "training_sft_export",
+      "category": "training_data",
+      "type": "training_export",
+      "input": {
+        "format": "sft",
+        "examples": [
+          {
+            "source_type": "conversation",
+            "prompt": "Question one",
+            "rejected_response": "Wrong one",
+            "target_response": "Correct one",
+            "feedback_reason": "incorrect",
+            "content_hash": "ffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "redaction_count": 0,
+            "quality_score": 1
+          },
+          {
+            "source_type": "research",
+            "prompt": "Question two",
+            "rejected_response": "Wrong two",
+            "target_response": "Correct two",
+            "feedback_reason": "bad_sources",
+            "content_hash": "00000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "redaction_count": 1,
+            "quality_score": 0.975
+          }
+        ]
+      },
+      "checks": {
+        "total_examples": 2,
+        "train_examples": 1,
+        "validation_examples": 1,
+        "train_contains": [
+          "\"messages\"",
+          "Correct one"
+        ],
+        "validation_contains": [
+          "\"messages\"",
+          "Correct two"
+        ]
+      }
     }
   ],
   "live": [
