@@ -442,3 +442,131 @@ def overall_score(
             results
         )
     )
+
+
+def evaluate_source_rerank(
+    *,
+    case_id: str,
+    category: str,
+    output: list,
+    checks: dict[str, Any],
+) -> EvalResult:
+
+    passed = 0
+    total = 0
+    failures: list[str] = []
+
+    if "count" in checks:
+        total += 1
+
+        expected = int(
+            checks[
+                "count"
+            ]
+        )
+
+        if len(
+            output
+        ) == expected:
+            passed += 1
+
+        else:
+            failures.append(
+                (
+                    "result count expected "
+                    f"{expected}, got {len(output)}"
+                )
+            )
+
+    if "first_url_contains" in checks:
+        total += 1
+
+        expected = str(
+            checks[
+                "first_url_contains"
+            ]
+        )
+
+        first_url = (
+            str(
+                output[0].get(
+                    "url",
+                    "",
+                )
+            )
+            if (
+                output
+                and isinstance(
+                    output[0],
+                    dict,
+                )
+            )
+            else ""
+        )
+
+        if expected in first_url:
+            passed += 1
+
+        else:
+            failures.append(
+                (
+                    "preferred domain was not "
+                    "moved to the first position"
+                )
+            )
+
+    if "preserve_urls" in checks:
+        total += 1
+
+        expected_urls = {
+            str(
+                url
+            )
+            for url
+            in checks[
+                "preserve_urls"
+            ]
+        }
+
+        actual_urls = {
+            str(
+                item.get(
+                    "url",
+                    "",
+                )
+            )
+            for item
+            in output
+            if isinstance(
+                item,
+                dict,
+            )
+        }
+
+        if actual_urls == expected_urls:
+            passed += 1
+
+        else:
+            failures.append(
+                "soft rerank changed the source set"
+            )
+
+    return EvalResult(
+        case_id=case_id,
+        category=category,
+        passed=(
+            passed == total
+        ),
+        checks_passed=passed,
+        checks_total=total,
+        error=(
+            "; ".join(
+                failures
+            )
+            if failures
+            else None
+        ),
+        output_preview=_preview(
+            output
+        ),
+    )
