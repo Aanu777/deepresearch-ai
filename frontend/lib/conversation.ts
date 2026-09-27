@@ -197,6 +197,34 @@ export type GenerateImageRequest = {
 };
 
 
+export type ConversationFeedbackRating =
+  | "up"
+  | "down";
+
+
+export type ConversationFeedbackReason =
+  | "incorrect"
+  | "did_not_follow_instructions"
+  | "outdated"
+  | "too_verbose"
+  | "too_brief"
+  | "bad_sources"
+  | "formatting"
+  | "other";
+
+
+export type ConversationFeedbackInput = {
+  rating:
+    ConversationFeedbackRating;
+
+  reason?:
+    ConversationFeedbackReason;
+
+  correction?:
+    string;
+};
+
+
 /* ============================================================
    AUTHENTICATED FETCH
    ============================================================ */
@@ -502,6 +530,51 @@ export async function editConversationMessage(
           JSON.stringify({
             content,
           }),
+      }
+    );
+
+
+  return response.json();
+}
+
+
+/* ============================================================
+   ASSISTANT FEEDBACK
+   ============================================================ */
+
+export async function submitConversationFeedback(
+  chatId: string,
+  messageId: string,
+  feedback:
+    ConversationFeedbackInput
+): Promise<{
+  saved: boolean;
+  rating:
+    ConversationFeedbackRating;
+  correction_learning:
+    boolean;
+}> {
+
+  const response =
+    await authenticatedFetch(
+      `/conversations/${encodeURIComponent(
+        chatId
+      )}/messages/${encodeURIComponent(
+        messageId
+      )}/feedback`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            feedback
+          ),
       }
     );
 
