@@ -570,3 +570,294 @@ def evaluate_source_rerank(
             output
         ),
     )
+
+
+def evaluate_training_prepare(
+    *,
+    case_id: str,
+    category: str,
+    output: dict[str, Any] | None,
+    checks: dict[str, Any],
+) -> EvalResult:
+
+    passed = 0
+    total = 0
+    failures: list[str] = []
+
+    if checks.get(
+        "null"
+    ):
+        total += 1
+
+        if output is None:
+            passed += 1
+
+        else:
+            failures.append(
+                "expected training example rejection"
+            )
+
+    if checks.get(
+        "not_null"
+    ):
+        total += 1
+
+        if output is not None:
+            passed += 1
+
+        else:
+            failures.append(
+                "expected a prepared training example"
+            )
+
+    if output is not None:
+        if "min_redactions" in checks:
+            total += 1
+
+            actual = int(
+                output.get(
+                    "redaction_count",
+                    0,
+                )
+                or 0
+            )
+
+            expected = int(
+                checks[
+                    "min_redactions"
+                ]
+            )
+
+            if actual >= expected:
+                passed += 1
+
+            else:
+                failures.append(
+                    (
+                        "redaction count expected at least "
+                        f"{expected}, got {actual}"
+                    )
+                )
+
+        field_checks = (
+            (
+                "prompt_contains",
+                "prompt",
+            ),
+            (
+                "rejected_contains",
+                "rejected_response",
+            ),
+            (
+                "target_contains",
+                "target_response",
+            ),
+        )
+
+        for check_name, field_name in field_checks:
+            for needle in checks.get(
+                check_name,
+                [],
+            ):
+                total += 1
+
+                actual_text = str(
+                    output.get(
+                        field_name,
+                        "",
+                    )
+                )
+
+                if str(
+                    needle
+                ) in actual_text:
+                    passed += 1
+
+                else:
+                    failures.append(
+                        (
+                            f"{field_name} missing "
+                            + str(
+                                needle
+                            )
+                        )
+                    )
+
+        if "hash_length" in checks:
+            total += 1
+
+            actual = len(
+                str(
+                    output.get(
+                        "content_hash",
+                        "",
+                    )
+                )
+            )
+
+            expected = int(
+                checks[
+                    "hash_length"
+                ]
+            )
+
+            if actual == expected:
+                passed += 1
+
+            else:
+                failures.append(
+                    (
+                        "content hash length expected "
+                        f"{expected}, got {actual}"
+                    )
+                )
+
+    return EvalResult(
+        case_id=case_id,
+        category=category,
+        passed=(
+            passed == total
+        ),
+        checks_passed=passed,
+        checks_total=total,
+        error=(
+            "; ".join(
+                failures
+            )
+            if failures
+            else None
+        ),
+        output_preview=_preview(
+            output
+        ),
+    )
+
+
+def evaluate_training_export(
+    *,
+    case_id: str,
+    category: str,
+    output: dict[str, Any],
+    checks: dict[str, Any],
+) -> EvalResult:
+
+    passed = 0
+    total = 0
+    failures: list[str] = []
+
+    manifest = dict(
+        output.get(
+            "manifest",
+            {},
+        )
+    )
+
+    for key in (
+        "total_examples",
+        "train_examples",
+        "validation_examples",
+    ):
+        if key not in checks:
+            continue
+
+        total += 1
+
+        actual = int(
+            manifest.get(
+                key,
+                -1,
+            )
+        )
+
+        expected = int(
+            checks[
+                key
+            ]
+        )
+
+        if actual == expected:
+            passed += 1
+
+        else:
+            failures.append(
+                (
+                    f"{key} expected "
+                    f"{expected}, got {actual}"
+                )
+            )
+
+    train_text = str(
+        output.get(
+            "train_jsonl",
+            "",
+        )
+    )
+
+    for needle in checks.get(
+        "train_contains",
+        [],
+    ):
+        total += 1
+
+        if str(
+            needle
+        ) in train_text:
+            passed += 1
+
+        else:
+            failures.append(
+                (
+                    "train export missing "
+                    + str(
+                        needle
+                    )
+                )
+            )
+
+    validation_text = str(
+        output.get(
+            "validation_jsonl",
+            "",
+        )
+    )
+
+    for needle in checks.get(
+        "validation_contains",
+        [],
+    ):
+        total += 1
+
+        if str(
+            needle
+        ) in validation_text:
+            passed += 1
+
+        else:
+            failures.append(
+                (
+                    "validation export missing "
+                    + str(
+                        needle
+                    )
+                )
+            )
+
+    return EvalResult(
+        case_id=case_id,
+        category=category,
+        passed=(
+            passed == total
+        ),
+        checks_passed=passed,
+        checks_total=total,
+        error=(
+            "; ".join(
+                failures
+            )
+            if failures
+            else None
+        ),
+        output_preview=_preview(
+            output
+        ),
+    )
