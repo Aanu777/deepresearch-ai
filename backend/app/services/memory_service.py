@@ -1,4 +1,5 @@
 import asyncio
+import asyncio
 import json
 import logging
 import re
@@ -95,6 +96,45 @@ Each item must be:
 
 Return [] when there is nothing worth remembering.
 Limit to at most 4 memories.
+""".strip()
+
+    _CONSOLIDATION_PROMPT = """
+You are a conservative memory consolidation engine.
+
+You will receive TWO durable memories of the SAME kind:
+- a newly learned memory
+- an older active memory
+
+Return ONLY one JSON object:
+
+{
+  "action": "keep_existing|keep_new|merge|keep_separate",
+  "merged_content": null
+}
+
+Use these rules:
+
+- keep_separate:
+  Use when both memories are valid but describe meaningfully
+  different facts, projects, goals, preferences, or contexts.
+
+- keep_existing:
+  Use when the new memory adds no useful information and the
+  existing memory is already the clearer/better statement.
+
+- keep_new:
+  Use when the new memory clearly supersedes, corrects, or
+  updates the existing memory.
+
+- merge:
+  Use only when the two memories are compatible and can be
+  represented accurately as one concise, self-contained memory.
+  When merging, set "merged_content" to that single memory.
+
+Do NOT invent information.
+Do NOT combine contradictory facts into one statement.
+Prefer keep_separate when uncertain.
+Keep merged_content under 500 characters.
 """.strip()
 
     def __init__(
@@ -911,6 +951,569 @@ Limit to at most 4 memories.
         response.raise_for_status()
 
     # ========================================================
+    # CONSOLIDATION
+    # ========================================================
+
+    def _parse_consolidation_decision(
+        self,
+        raw: str,
+    ) -> dict[str, Any] | None:
+
+        text = raw.strip()
+
+        if text.startswith(
+            "```"
+        ):
+            text = re.sub(
+                r"^```(?:json)?\s*",
+                "",
+                text,
+                flags=re.IGNORECASE,
+            )
+
+            text = re.sub(
+                r"\s*```$",
+                "",
+                text,
+            )
+
+        start = text.find(
+            "{"
+        )
+
+        end = text.rfind(
+            "}"
+        )
+
+        if (
+            start < 0
+            or end < start
+        ):
+            return None
+
+        try:
+            payload = json.loads(
+                text[
+                    start:
+                    end + 1
+                ]
+            )
+
+        except json.JSONDecodeError:
+            return None
+
+        if not isinstance(
+            payload,
+            dict,
+        ):
+            return None
+
+        action = str(
+            payload.get(
+                "action",
+                "",
+            )
+        ).strip()
+
+        if action not in {
+            "keep_existing",
+            "keep_new",
+            "merge",
+            "keep_separate",
+        }:
+            return None
+
+        merged_content = (
+            payload.get(
+                "merged_content"
+            )
+        )
+
+        if merged_content is not None:
+            merged_content = str(
+                merged_content
+            ).strip()
+
+        return {
+            "action":
+                action,
+
+            "merged_content":
+                merged_content,
+        }
+
+    async def _retire_memory(
+        self,
+        *,
+        access_token: str,
+        memory_id: str,
+        superseded_by: str,
+    ) -> None:
+
+        now = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        async with httpx.AsyncClient(
+            timeout=6.0
+        ) as client:
+
+            response = await client.patch(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?id=eq."
+                    + memory_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+                json={
+                    "is_active":
+                        False,
+
+                    "superseded_by":
+                        superseded_by,
+
+                    "consolidated_at":
+                        now,
+
+                    "updated_at":
+                        now,
+                },
+            )
+
+        response.raise_for_status()
+
+    async def _update_consolidated_memory(
+        self,
+        *,
+        access_token: str,
+        memory_id: str,
+        content: str,
+        embedding: list[float],
+        confidence: float,
+        importance: float,
+    ) -> None:
+
+        now = datetime.now(
+            timezone.utc
+        ).isoformat()
+
+        async with httpx.AsyncClient(
+            timeout=6.0
+        ) as client:
+
+            response = await client.patch(
+                (
+                    self._rest_base
+                    + "/user_memories"
+                    + "?id=eq."
+                    + memory_id
+                ),
+                headers=self._headers(
+                    access_token,
+                    prefer="return=minimal",
+                ),
+                json={
+                    "content":
+                        content,
+
+                    "normalized_content":
+                        self._normalize(
+                            content
+                        ),
+
+                    "embedding":
+                        embedding,
+
+                    "confidence":
+                        confidence,
+
+                    "importance":
+                        importance,
+
+                    "consolidated_at":
+                        now,
+
+                    "updated_at":
+                        now,
+                },
+            )
+
+        response.raise_for_status()
+
+    async def _consolidate_candidate(
+        self,
+        *,
+        access_token: str,
+        candidate_id: str,
+        kind: str,
+        content: str,
+        embedding: list[float],
+        confidence: float,
+        importance: float,
+    ) -> None:
+
+        if not (
+            settings
+            .MEMORY_CONSOLIDATION_ENABLED
+        ):
+            return
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=6.0
+            ) as client:
+
+                response = await client.post(
+                    (
+                        self._rest_base
+                        + "/rpc/match_user_memories"
+                    ),
+                    headers=self._headers(
+                        access_token
+                    ),
+                    json={
+                        "query_embedding":
+                            embedding,
+
+                        "match_count":
+                            6,
+
+                        "min_similarity":
+                            settings
+                            .MEMORY_CONSOLIDATION_MIN_SIMILARITY,
+                    },
+                )
+
+            response.raise_for_status()
+
+            rows = response.json()
+
+            if not isinstance(
+                rows,
+                list,
+            ):
+                return
+
+            neighbor: dict[
+                str,
+                Any,
+            ] | None = None
+
+            for row in rows:
+
+                if not isinstance(
+                    row,
+                    dict,
+                ):
+                    continue
+
+                row_id = str(
+                    row.get(
+                        "id",
+                        "",
+                    )
+                )
+
+                row_kind = str(
+                    row.get(
+                        "kind",
+                        "",
+                    )
+                )
+
+                if (
+                    not row_id
+                    or row_id
+                    == candidate_id
+                    or row_kind
+                    != kind
+                ):
+                    continue
+
+                neighbor = row
+                break
+
+            if neighbor is None:
+                return
+
+            existing_id = str(
+                neighbor[
+                    "id"
+                ]
+            )
+
+            existing_content = str(
+                neighbor.get(
+                    "content",
+                    "",
+                )
+            ).strip()
+
+            if not existing_content:
+                return
+
+            arbiter_input = {
+                "new_memory": {
+                    "kind":
+                        kind,
+
+                    "content":
+                        content,
+
+                    "confidence":
+                        confidence,
+
+                    "importance":
+                        importance,
+                },
+
+                "existing_memory": {
+                    "kind":
+                        kind,
+
+                    "content":
+                        existing_content,
+
+                    "confidence":
+                        float(
+                            neighbor.get(
+                                "confidence",
+                                0.8,
+                            )
+                            or 0.8
+                        ),
+
+                    "importance":
+                        float(
+                            neighbor.get(
+                                "importance",
+                                0.5,
+                            )
+                            or 0.5
+                        ),
+
+                    "similarity":
+                        float(
+                            neighbor.get(
+                                "similarity",
+                                0.0,
+                            )
+                            or 0.0
+                        ),
+                },
+            }
+
+            decision_raw = (
+                await asyncio.to_thread(
+                    llm_service.generate_chat,
+                    [
+                        {
+                            "role":
+                                "system",
+
+                            "content":
+                                self
+                                ._CONSOLIDATION_PROMPT,
+                        },
+                        {
+                            "role":
+                                "user",
+
+                            "content":
+                                json.dumps(
+                                    arbiter_input,
+                                    ensure_ascii=False,
+                                ),
+                        },
+                    ],
+                    settings
+                    .MEMORY_CONSOLIDATION_MODEL,
+                    0.0,
+                )
+            )
+
+            decision = (
+                self
+                ._parse_consolidation_decision(
+                    decision_raw
+                )
+            )
+
+            if decision is None:
+                return
+
+            action = decision[
+                "action"
+            ]
+
+            if action == "keep_separate":
+                return
+
+            if action == "keep_existing":
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        candidate_id
+                    ),
+                    superseded_by=(
+                        existing_id
+                    ),
+                )
+
+                return
+
+            if action == "keep_new":
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        existing_id
+                    ),
+                    superseded_by=(
+                        candidate_id
+                    ),
+                )
+
+                return
+
+            merged_content = str(
+                decision.get(
+                    "merged_content"
+                )
+                or ""
+            ).strip()
+
+            if (
+                len(merged_content) < 8
+                or len(merged_content) > 500
+                or self._looks_sensitive(
+                    merged_content
+                )
+            ):
+                return
+
+            merged_normalized = (
+                self._normalize(
+                    merged_content
+                )
+            )
+
+            if (
+                merged_normalized
+                == self._normalize(
+                    existing_content
+                )
+            ):
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        candidate_id
+                    ),
+                    superseded_by=(
+                        existing_id
+                    ),
+                )
+
+                return
+
+            if (
+                merged_normalized
+                == self._normalize(
+                    content
+                )
+            ):
+                await self._retire_memory(
+                    access_token=(
+                        access_token
+                    ),
+                    memory_id=(
+                        existing_id
+                    ),
+                    superseded_by=(
+                        candidate_id
+                    ),
+                )
+
+                return
+
+            merged_embedding = (
+                await self._embed(
+                    merged_content
+                )
+            )
+
+            existing_confidence = float(
+                neighbor.get(
+                    "confidence",
+                    0.8,
+                )
+                or 0.8
+            )
+
+            existing_importance = float(
+                neighbor.get(
+                    "importance",
+                    0.5,
+                )
+                or 0.5
+            )
+
+            await self._retire_memory(
+                access_token=(
+                    access_token
+                ),
+                memory_id=(
+                    existing_id
+                ),
+                superseded_by=(
+                    candidate_id
+                ),
+            )
+
+            await self._update_consolidated_memory(
+                access_token=(
+                    access_token
+                ),
+                memory_id=(
+                    candidate_id
+                ),
+                content=(
+                    merged_content
+                ),
+                embedding=(
+                    merged_embedding
+                ),
+                confidence=min(
+                    1.0,
+                    max(
+                        confidence,
+                        existing_confidence,
+                    ),
+                ),
+                importance=min(
+                    1.0,
+                    max(
+                        importance,
+                        existing_importance,
+                    ),
+                ),
+            )
+
+        except Exception:
+            logger.exception(
+                "Memory consolidation failed."
+            )
+
+    # ========================================================
     # PERSISTENCE
     # ========================================================
 
@@ -961,12 +1564,16 @@ Limit to at most 4 memories.
                         + "/user_memories"
                         + "?on_conflict="
                         + "user_id,normalized_content"
+                        + "&select="
+                        + "id,kind,content,confidence,"
+                        + "importance,source_type,"
+                        + "source_id,source_message_id"
                     ),
                     headers=self._headers(
                         access_token,
                         prefer=(
                             "resolution=merge-duplicates,"
-                            "return=minimal"
+                            "return=representation"
                         ),
                     ),
                     json={
@@ -1011,6 +1618,15 @@ Limit to at most 4 memories.
                         "source_message_id":
                             source_message_id,
 
+                        "is_active":
+                            True,
+
+                        "superseded_by":
+                            None,
+
+                        "consolidated_at":
+                            None,
+
                         "updated_at":
                             datetime.now(
                                 timezone.utc
@@ -1027,6 +1643,65 @@ Limit to at most 4 memories.
                     response.status_code,
                     response.text[:500],
                 )
+
+                return
+
+            payload = response.json()
+
+            if not (
+                isinstance(
+                    payload,
+                    list,
+                )
+                and payload
+                and isinstance(
+                    payload[0],
+                    dict,
+                )
+            ):
+                return
+
+            stored = payload[0]
+
+            stored_id = str(
+                stored.get(
+                    "id",
+                    "",
+                )
+            )
+
+            if not stored_id:
+                return
+
+            await self._consolidate_candidate(
+                access_token=(
+                    access_token
+                ),
+                candidate_id=(
+                    stored_id
+                ),
+                kind=str(
+                    candidate[
+                        "kind"
+                    ]
+                ),
+                content=(
+                    content
+                ),
+                embedding=(
+                    embedding
+                ),
+                confidence=float(
+                    candidate[
+                        "confidence"
+                    ]
+                ),
+                importance=float(
+                    candidate[
+                        "importance"
+                    ]
+                ),
+            )
 
         except Exception:
             logger.exception(
