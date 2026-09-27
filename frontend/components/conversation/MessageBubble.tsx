@@ -345,6 +345,13 @@ function TextMessage({
 
 
   const [
+    feedbackTrainingOptIn,
+    setFeedbackTrainingOptIn,
+  ] =
+    useState(false);
+
+
+  const [
     feedbackSubmitting,
     setFeedbackSubmitting,
   ] =
@@ -528,6 +535,10 @@ function TextMessage({
         ""
       );
 
+      setFeedbackTrainingOptIn(
+        false
+      );
+
     } catch (
       error
     ) {
@@ -579,6 +590,10 @@ function TextMessage({
       false
     );
 
+    setFeedbackTrainingOptIn(
+      false
+    );
+
     setFeedbackError(
       null
     );
@@ -626,6 +641,12 @@ function TextMessage({
                   trimmedCorrection,
               }
             : {}),
+
+          include_in_training:
+            Boolean(
+              trimmedCorrection
+            ) &&
+            feedbackTrainingOptIn,
         }
       );
 
@@ -634,6 +655,10 @@ function TextMessage({
       );
 
       setFeedbackOpen(
+        false
+      );
+
+      setFeedbackTrainingOptIn(
         false
       );
 
@@ -1343,9 +1368,20 @@ function TextMessage({
                   onChange={(
                     event
                   ) => {
+                    const value =
+                      event.target.value;
+
                     setFeedbackCorrection(
-                      event.target.value
+                      value
                     );
+
+                    if (
+                      !value.trim()
+                    ) {
+                      setFeedbackTrainingOptIn(
+                        false
+                      );
+                    }
                   }}
                   maxLength={
                     4000
@@ -1370,6 +1406,54 @@ function TextMessage({
                     focus:border-white/[0.14]
                   "
                 />
+
+                <label
+                  className="
+                    mt-3
+                    flex
+                    cursor-pointer
+                    items-start
+                    gap-2.5
+                    rounded-xl
+                    border
+                    border-white/[0.06]
+                    bg-white/[0.02]
+                    px-3
+                    py-2.5
+                    text-[11px]
+                    leading-4
+                    text-white/42
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked={
+                      feedbackTrainingOptIn
+                    }
+                    disabled={
+                      !feedbackCorrection
+                        .trim()
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      setFeedbackTrainingOptIn(
+                        event.target.checked
+                      );
+                    }}
+                    className="
+                      mt-0.5
+                      h-3.5
+                      w-3.5
+                      accent-white
+                      disabled:opacity-30
+                    "
+                  />
+
+                  <span>
+                    Add this correction to my private training dataset. Obvious secrets and direct identifiers are redacted before storage.
+                  </span>
+                </label>
 
                 {feedbackError && (
                   <p
