@@ -21,6 +21,7 @@ TARGET_PREFIXES = (
     "/api/v1/conversations",
     "/api/v1/research",
     "/api/v1/memory",
+    "/api/v1/training",
 )
 
 ENCRYPTED_JSON_TYPE = (
