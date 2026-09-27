@@ -3,6 +3,7 @@
 import {
   Brain,
   ChevronLeft,
+  Database,
   ChevronRight,
   Clock3,
   FlaskConical,
@@ -307,6 +308,12 @@ export default function Sidebar({
     mounted &&
     pathname?.startsWith(
       "/memory"
+    );
+
+  const isTraining =
+    mounted &&
+    pathname?.startsWith(
+      "/training"
     );
 
   // ==========================================================
@@ -737,6 +744,20 @@ export default function Sidebar({
     );
   }
 
+  function openTraining() {
+    setSearch("");
+
+    setProfileOpen(
+      false
+    );
+
+    onMobileClose();
+
+    router.push(
+      "/training"
+    );
+  }
+
   async function handleNewChat() {
     if (
       !isAuthenticated
@@ -877,6 +898,9 @@ export default function Sidebar({
         isMemory={
           isMemory
         }
+        isTraining={
+          isTraining
+        }
         search={
           search
         }
@@ -927,6 +951,9 @@ export default function Sidebar({
         }
         openMemory={
           openMemory
+        }
+        openTraining={
+          openTraining
         }
         openResearchChat={
           openResearchChat
@@ -992,7 +1019,8 @@ export default function Sidebar({
             </IconButton>
           </div>
 
-          {!isMemory && (
+          {!isMemory &&
+            !isTraining && (
             <div className="px-3">
               <IconButton
                 onClick={
@@ -1051,6 +1079,20 @@ export default function Sidebar({
               }
             >
               <Brain
+                size={17}
+              />
+            </CollapsedModeButton>
+
+            <CollapsedModeButton
+              active={
+                isTraining
+              }
+              label="Training"
+              onClick={
+                openTraining
+              }
+            >
+              <Database
                 size={17}
               />
             </CollapsedModeButton>
@@ -1190,6 +1232,9 @@ export default function Sidebar({
           isMemory={
             isMemory
           }
+          isTraining={
+            isTraining
+          }
           search={
             search
           }
@@ -1241,6 +1286,9 @@ export default function Sidebar({
           openMemory={
             openMemory
           }
+          openTraining={
+            openTraining
+          }
           openResearchChat={
             openResearchChat
           }
@@ -1276,6 +1324,7 @@ type ExpandedContentProps = {
   isResearch: boolean;
   isConversation: boolean;
   isMemory: boolean;
+  isTraining: boolean;
 
   search: string;
 
@@ -1324,6 +1373,7 @@ type ExpandedContentProps = {
   openConversation: () => void;
 
   openMemory: () => void;
+  openTraining: () => void;
 
   openResearchChat:
     (
@@ -1356,6 +1406,7 @@ function ExpandedContent({
   isResearch,
   isConversation,
   isMemory,
+  isTraining,
 
   search,
   setSearch,
@@ -1383,6 +1434,7 @@ function ExpandedContent({
   openResearch,
   openConversation,
   openMemory,
+  openTraining,
 
   openResearchChat,
   openConversationChat,
@@ -1442,7 +1494,8 @@ function ExpandedContent({
 
       {/* NEW */}
 
-      {!isMemory && (
+      {!isMemory &&
+        !isTraining && (
         <div className="px-3 pt-1">
           <Button
             variant="ghost"
@@ -1510,11 +1563,27 @@ function ExpandedContent({
             openMemory
           }
         />
+
+        <ModeButton
+          active={
+            isTraining
+          }
+          icon={
+            <Database
+              size={17}
+            />
+          }
+          label="Training"
+          onClick={
+            openTraining
+          }
+        />
       </div>
 
       {isAuthenticated ? (
         <>
-          {!isMemory ? (
+          {!isMemory &&
+            !isTraining ? (
             <>
               {/* SEARCH */}
 
