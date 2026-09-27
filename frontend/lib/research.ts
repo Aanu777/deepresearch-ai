@@ -140,6 +140,85 @@ export async function sendResearchQuestion(
   return response.json();
 }
 
+export type ResearchFeedbackRating =
+  | "up"
+  | "down";
+
+
+export type ResearchFeedbackReason =
+  | "incorrect"
+  | "incomplete"
+  | "bad_sources"
+  | "outdated"
+  | "too_verbose"
+  | "too_brief"
+  | "formatting"
+  | "other";
+
+
+export type ResearchFeedbackInput = {
+  rating:
+    ResearchFeedbackRating;
+
+  reason?:
+    ResearchFeedbackReason;
+
+  correction?:
+    string;
+};
+
+
+// ============================================================
+// RESEARCH FEEDBACK
+// ============================================================
+
+export async function submitResearchFeedback(
+  jobId: string,
+  feedback:
+    ResearchFeedbackInput
+) {
+  const headers =
+    await getAuthHeaders();
+
+  const response =
+    await secureFetch(
+      `${API_BASE}/research/${encodeURIComponent(
+        jobId
+      )}/feedback`,
+      {
+        method:
+          "POST",
+
+        headers: {
+          ...headers,
+
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify(
+            feedback
+          ),
+
+        cache:
+          "no-store",
+      }
+    );
+
+  if (!response.ok) {
+    const text =
+      await response.text();
+
+    throw new Error(
+      `Failed to save research feedback: ${response.status} ${text}`
+    );
+  }
+
+  return response.json();
+}
+
+
 // ============================================================
 // CANCEL RESEARCH
 // ============================================================
