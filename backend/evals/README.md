@@ -71,3 +71,12 @@ The runner exits:
 Generated reports are stored under `evals/results/` by default and are ignored by Git.
 
 This makes the runner suitable for future CI integration.
+
+
+## CI gate
+
+`.github/workflows/ai-regression-evals.yml` runs the deterministic
+offline suite on every pull request to `MAIN` and every push to `MAIN`.
+
+The workflow requires no API secrets. A threshold regression returns a
+non-zero exit code and fails the check.
