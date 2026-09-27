@@ -12,6 +12,7 @@ from app.middleware.payload_encryption import (
 from app.api.v1.research import router as research_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.memory import router as memory_router
+from app.api.v1.training import router as training_router
 from app.api.v1.websocket import router as websocket_router
 
 
@@ -131,6 +132,12 @@ app.include_router(
     memory_router,
     prefix="/api/v1/memory",
     tags=["Memory"],
+)
+
+app.include_router(
+    training_router,
+    prefix="/api/v1/training",
+    tags=["Training"],
 )
 
 app.include_router(
