@@ -41,6 +41,10 @@ from app.services.memory_service import (
     memory_service,
 )
 
+from app.services.training_data_service import (
+    training_data_service,
+)
+
 
 router = APIRouter()
 
@@ -70,6 +74,8 @@ class ResearchFeedbackRequest(
     correction: (
         str | None
     ) = None
+
+    include_in_training: bool = False
 
 
 def source_domains(
@@ -486,6 +492,18 @@ async def submit_research_feedback(
         ),
     )
 
+    background_tasks.add_task(
+        training_data_service
+        .remove_source_examples,
+        access_token=(
+            current_user.access_token
+        ),
+        source_type="research",
+        source_id=(
+            job_id
+        ),
+    )
+
     if (
         request.rating == "down"
         and correction
@@ -508,6 +526,45 @@ async def submit_research_feedback(
             source_type="research",
         )
 
+    if (
+        request.rating == "down"
+        and correction
+        and request.include_in_training
+    ):
+        background_tasks.add_task(
+            training_data_service
+            .capture,
+            user_id=(
+                current_user.user_id
+            ),
+            access_token=(
+                current_user.access_token
+            ),
+            source_type="research",
+            source_id=(
+                job_id
+            ),
+            prompt=(
+                job.query
+            ),
+            rejected_response=(
+                job.report
+            ),
+            target_response=(
+                correction
+            ),
+            feedback_reason=(
+                reason
+            ),
+            metadata={
+                "source_domains":
+                    domains,
+
+                "quality_score":
+                    job.metrics.confidence,
+            },
+        )
+
     return {
         "saved":
             True,
@@ -523,6 +580,14 @@ async def submit_research_feedback(
                 request.rating
                 == "down"
                 and correction
+            ),
+
+        "training_capture":
+            bool(
+                request.rating
+                == "down"
+                and correction
+                and request.include_in_training
             ),
     }
 
