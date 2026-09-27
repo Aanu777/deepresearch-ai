@@ -222,6 +222,9 @@ export type ConversationFeedbackInput = {
 
   correction?:
     string;
+
+  include_in_training?:
+    boolean;
 };
 
 

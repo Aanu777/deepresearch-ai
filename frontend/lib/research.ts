@@ -165,6 +165,9 @@ export type ResearchFeedbackInput = {
 
   correction?:
     string;
+
+  include_in_training?:
+    boolean;
 };
 
 

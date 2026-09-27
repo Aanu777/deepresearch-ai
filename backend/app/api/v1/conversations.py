@@ -58,6 +58,10 @@ from app.services.memory_service import (
     memory_service,
 )
 
+from app.services.training_data_service import (
+    training_data_service,
+)
+
 from app.services.feedback_service import (
     feedback_service,
 )
@@ -141,6 +145,8 @@ class MessageFeedbackRequest(
     correction: (
         str | None
     ) = None
+
+    include_in_training: bool = False
 
 
 # ============================================================
@@ -2032,6 +2038,28 @@ async def submit_message_feedback(
         ),
     )
 
+    background_tasks.add_task(
+        training_data_service
+        .remove_source_examples,
+        access_token=(
+            current_user
+            .access_token
+        ),
+        source_type="conversation",
+        source_id=(
+            message_id
+        ),
+    )
+
+    prompt = (
+        previous_user_content(
+            chat_id=chat_id,
+            message_id=(
+                message_id
+            ),
+        )
+    )
+
     if (
         request.rating
         == "down"
@@ -2053,14 +2081,48 @@ async def submit_message_feedback(
             source_message_id=(
                 message_id
             ),
-            context=(
-                previous_user_content(
-                    chat_id=chat_id,
-                    message_id=(
-                        message_id
-                    ),
-                )
+            context=prompt,
+        )
+
+    if (
+        request.rating
+        == "down"
+        and correction
+        and request.include_in_training
+        and prompt
+    ):
+        background_tasks.add_task(
+            training_data_service
+            .capture,
+            user_id=(
+                current_user
+                .user_id
             ),
+            access_token=(
+                current_user
+                .access_token
+            ),
+            source_type="conversation",
+            source_id=(
+                message_id
+            ),
+            prompt=prompt,
+            rejected_response=(
+                message.content
+            ),
+            target_response=(
+                correction
+            ),
+            feedback_reason=(
+                reason
+            ),
+            metadata={
+                "chat_id":
+                    chat_id,
+
+                "message_type":
+                    message.message_type,
+            },
         )
 
     return {
@@ -2075,6 +2137,15 @@ async def submit_message_feedback(
                 request.rating
                 == "down"
                 and correction
+            ),
+
+        "training_capture":
+            bool(
+                request.rating
+                == "down"
+                and correction
+                and request.include_in_training
+                and prompt
             ),
     }
 

@@ -171,6 +171,8 @@ def run_offline(
         evaluate_memory_candidates,
         evaluate_source_rerank,
         evaluate_text,
+        evaluate_training_export,
+        evaluate_training_prepare,
     )
 
     from app.services.llm_service import (
@@ -183,6 +185,10 @@ def run_offline(
 
     from app.tools.search import (
         search_tool,
+    )
+
+    from app.services.training_data_service import (
+        training_data_service,
     )
 
     results: list[
@@ -307,6 +313,129 @@ def run_offline(
                 )
 
                 result = evaluate_source_rerank(
+                    case_id=case_id,
+                    category=category,
+                    output=output,
+                    checks=checks,
+                )
+
+            elif case_type == "training_prepare":
+                payload = dict(
+                    case.get(
+                        "input",
+                        {},
+                    )
+                )
+
+                output = (
+                    training_data_service
+                    .prepare_example(
+                        source_type=str(
+                            payload.get(
+                                "source_type",
+                                "conversation",
+                            )
+                        ),
+                        source_id=str(
+                            payload.get(
+                                "source_id",
+                                "eval",
+                            )
+                        ),
+                        prompt=str(
+                            payload.get(
+                                "prompt",
+                                "",
+                            )
+                        ),
+                        rejected_response=str(
+                            payload.get(
+                                "rejected_response",
+                                "",
+                            )
+                        ),
+                        target_response=str(
+                            payload.get(
+                                "target_response",
+                                "",
+                            )
+                        ),
+                        feedback_reason=(
+                            str(
+                                payload.get(
+                                    "feedback_reason"
+                                )
+                            )
+                            if payload.get(
+                                "feedback_reason"
+                            )
+                            is not None
+                            else None
+                        ),
+                    )
+                )
+
+                result = evaluate_training_prepare(
+                    case_id=case_id,
+                    category=category,
+                    output=output,
+                    checks=checks,
+                )
+
+            elif case_type == "training_split":
+                payload = dict(
+                    case.get(
+                        "input",
+                        {},
+                    )
+                )
+
+                output = (
+                    training_data_service
+                    .split_for_hash(
+                        str(
+                            payload.get(
+                                "content_hash",
+                                "",
+                            )
+                        )
+                    )
+                )
+
+                result = evaluate_text(
+                    case_id=case_id,
+                    category=category,
+                    output=output,
+                    checks=checks,
+                )
+
+            elif case_type == "training_export":
+                payload = dict(
+                    case.get(
+                        "input",
+                        {},
+                    )
+                )
+
+                output = (
+                    training_data_service
+                    .export_dataset(
+                        list(
+                            payload.get(
+                                "examples",
+                                [],
+                            )
+                        ),
+                        dataset_format=str(
+                            payload.get(
+                                "format",
+                                "sft",
+                            )
+                        ),
+                    )
+                )
+
+                result = evaluate_training_export(
                     case_id=case_id,
                     category=category,
                     output=output,
