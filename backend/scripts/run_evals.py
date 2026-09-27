@@ -169,6 +169,7 @@ def run_offline(
         EvalResult,
         evaluate_consolidation_decision,
         evaluate_memory_candidates,
+        evaluate_source_rerank,
         evaluate_text,
     )
 
@@ -178,6 +179,10 @@ def run_offline(
 
     from app.services.memory_service import (
         memory_service,
+    )
+
+    from app.tools.search import (
+        search_tool,
     )
 
     results: list[
@@ -269,6 +274,39 @@ def run_offline(
                 )
 
                 result = evaluate_consolidation_decision(
+                    case_id=case_id,
+                    category=category,
+                    output=output,
+                    checks=checks,
+                )
+
+            elif case_type == "source_rerank":
+                payload = dict(
+                    case.get(
+                        "input",
+                        {},
+                    )
+                )
+
+                output = (
+                    search_tool
+                    .soft_rerank(
+                        list(
+                            payload.get(
+                                "items",
+                                [],
+                            )
+                        ),
+                        list(
+                            payload.get(
+                                "preferred_domains",
+                                [],
+                            )
+                        ),
+                    )
+                )
+
+                result = evaluate_source_rerank(
                     case_id=case_id,
                     category=category,
                     output=output,
