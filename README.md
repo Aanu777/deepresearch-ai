@@ -1,417 +1,449 @@
+# DeepResearch AI
 
-# DeepResearch
+> Evidence-first AI research and intelligent conversation, built with a multi-agent research pipeline, authenticated user data, long-term memory, feedback learning, and opt-in private training data.
 
-> A multi-agent AI research system designed to break complex research tasks into smaller problems, investigate them, verify findings, and produce structured reports.
-
-![DeepResearch](https://img.shields.io/badge/DeepResearch-AI%20Research%20System-06b6d4?style=for-the-badge)
-![Next.js](https://img.shields.io/badge/Next.js-TypeScript-black?style=flat-square&logo=next.js)
-![Python](https://img.shields.io/badge/Python-Backend-3776AB?style=flat-square&logo=python)
-![AI Agents](https://img.shields.io/badge/Architecture-Multi--Agent-purple?style=flat-square)
-
----
+[![Live App](https://img.shields.io/badge/Live%20App-Vercel-black?style=for-the-badge&logo=vercel)](https://deepresearch-ai-nu.vercel.app)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js)
+![React](https://img.shields.io/badge/React-19-149ECA?style=flat-square&logo=react)
+![FastAPI](https://img.shields.io/badge/FastAPI-Python-009688?style=flat-square&logo=fastapi)
+![Supabase](https://img.shields.io/badge/Supabase-Auth%20%2B%20Data-3FCF8E?style=flat-square&logo=supabase)
+![LangGraph](https://img.shields.io/badge/Orchestration-LangGraph-purple?style=flat-square)
 
 ## Overview
 
-DeepResearch is an AI-powered research system built around a **multi-agent architecture**.
-
-Instead of relying on a single AI model to perform an entire research task, DeepResearch divides the workflow between specialized agents.
-
-A typical research task moves through:
-
-text
- 
-     User Query
-         │
-         ▼
-    ┌─────────┐
-    │ Planner │
-    └────┬────┘
-         │
-         ▼
-    ┌─────────┐
-    │ Searcher│
-    └────┬────┘
-         │
-         ▼
-    ┌───────────┐
-    │ Reflection│
-    └─────┬─────┘
-          │
-          ▼
-    ┌─────────┐
-    │ Verifier│
-    └────┬────┘
-         │
-         ▼
-     ┌────────┐
-     │ Writer │
-     └────┬───┘
-          │
-          ▼
-    Research Report
-
-
-Why Multi-Agent?
-
-A single model handling every part of research has to simultaneously:
-
-Understand the research question
-Plan the investigation
-Find relevant information
-Identify missing information
-Evaluate sources
-Verify claims
-Write the final response
-
-DeepResearch separates these responsibilities.
-
-Each agent has a specific role and contributes to the overall research process.
-
-This makes the architecture easier to reason about, extend, and improve.
-
-Research Pipeline
-1. Planner
-
-The Planner analyzes the user's research request and breaks it into smaller, actionable subtasks.
-
-Responsibilities:
-
-Understand the research objective
-Decompose complex questions
-Create research subtasks
-Define what information needs to be collected
-2. Searcher
-
-The Searcher gathers relevant information from available online sources.
-
-Responsibilities:
-
-Search for relevant information
-Collect useful sources
-Extract relevant findings
-Provide evidence for downstream agents
-3. Reflection
-
-The Reflection agent analyzes the current research state.
-
-It looks for:
-
-Missing information
-Weak reasoning
-Incomplete research
-Contradictions
-Areas requiring additional investigation
+DeepResearch AI is a full-stack research application with two primary modes:
 
-The goal is to determine whether the research is ready for verification or requires further work.
+- **Conversation** for fast, interactive AI chat.
+- **Deep Research** for multi-step investigations that plan, search, extract, reflect, verify, synthesize, and write a structured report.
 
-4. Verifier
+The project is designed around explicit research stages instead of asking one model to do everything in a single prompt.
 
-The Verifier focuses on validating research claims.
+## Live deployment
 
-Responsibilities:
+- **Frontend:** https://deepresearch-ai-nu.vercel.app
+- **Backend API:** https://deepresearch-ai-cc22e7fc.fastapicloud.dev
+- **API base:** https://deepresearch-ai-cc22e7fc.fastapicloud.dev/api/v1
+- **Database/Auth:** Supabase
+
+## Research pipeline
+
+```text
+User Query
+   │
+   ▼
+Planner
+   │
+   ▼
+Searcher
+   │
+   ▼
+Extractor
+   │
+   ▼
+Reflection
+   │
+   ▼
+Verifier
+   │
+   ▼
+Synthesizer
+   │
+   ▼
+Writer
+   │
+   ▼
+Structured Research Report
+```
 
-Cross-check important claims
-Compare evidence
-Identify unsupported conclusions
-Evaluate source credibility
-Reduce factual errors
-5. Writer
+### Planner
+
+Breaks the request into research objectives, sub-questions, and evidence requirements.
 
-The Writer transforms the verified research into the final report.
+### Searcher
 
-The output is designed to contain:
+Finds relevant live sources for each research objective.
 
-Structured sections
-Clear explanations
-Summaries
-Citations
-References
-Architecture
+### Extractor
+
+Pulls useful claims, facts, and context from collected source material.
+
+### Reflection
+
+Looks for missing coverage, weak evidence, contradictions, and unanswered questions.
+
+### Verifier
+
+Checks whether important claims are actually supported by the gathered evidence.
+
+### Synthesizer
+
+Combines findings across sources into a coherent research state.
+
+### Writer
+
+Turns verified research into a readable, structured final report.
+
+## Features
+
+### Conversation
+
+- Authenticated AI chat
+- Conversation history
+- Message editing
+- File attachments
+- Speech-to-text
+- Image generation
+- Image editing
+- User feedback
+- Long-term semantic memory
+- Correction-based learning signals
+
+### Deep Research
+
+- Seven-stage research pipeline
+- Live web research
+- PDF-assisted research
+- Source-aware synthesis
+- Research history
+- Follow-up questions
+- Research feedback
+- Learned source preferences
+- Structured final reports
+
+### Adaptive learning foundation
+
+The current release includes the controlled learning foundation completed through **Phase 6**:
+
+- Semantic user memory
+- Conversation feedback capture
+- Research feedback capture
+- Memory consolidation
+- Deterministic evaluation framework
+- Private training-data collection
+- Explicit opt-in before a correction enters the training dataset
+- Redaction of obvious secrets/direct identifiers
+- Deduplication
+- Deterministic train/validation splits
+- SFT export
+- Preference-data export
+
+> The application does **not** automatically fine-tune or promote a model. The current training workspace manages private, user-approved training examples and dataset exports.
+
+## Security and privacy
+
+DeepResearch AI uses several layers of protection:
+
+- Supabase authentication
+- Row Level Security for user-scoped learning data
+- Bearer-token authentication between the frontend and FastAPI
+- Application-layer encrypted AI payload transport
+- Per-user memory, feedback, and training records
+- Training capture disabled by default
+- No automatic upload of private training exports to a model provider
+
+The frontend public encryption key and backend private encryption key must belong to the same RSA key pair.
+
+## Tech stack
+
+### Frontend
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Supabase JS / SSR
+- Framer Motion
+- GSAP
+- Three.js / React Three Fiber
+- Zustand
+- React Markdown
+
+### Backend
+
+- Python 3.12
+- FastAPI
+- Uvicorn
+- LangGraph
+- OpenAI-compatible model client
+- Tavily
+- Supabase REST/Auth
+- Deepgram
+- Pollinations
+- pypdf
+- python-docx
+
+### AI providers
+
+- **OpenRouter** — conversation, research, embeddings, and other LLM workloads
+- **Tavily** — live web search
+- **Deepgram** — speech-to-text
+- **Pollinations** — image generation and editing
+
+## Repository structure
+
+```text
+deepresearch-ai/
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── services/
+│   │   └── tools/
+│   ├── evals/
+│   ├── scripts/
+│   ├── requirements.txt
+│   └── pyproject.toml
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   ├── lib/
+│   ├── public/
+│   └── package.json
+├── .github/
+│   └── workflows/
+└── README.md
+```
 
-DeepResearch follows a modular architecture where the research workflow is separated into specialized components.
+## Getting started
 
-                    ┌──────────────┐
-                    │    User      │
-                    │    Query     │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │    Planner   │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │   Searcher   │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │  Reflection  │
-                    └──────┬───────┘
-                           │
-                    ┌──────▼───────┐
-                    │   Verifier   │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │    Writer    │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │ Final Report │
-                    └──────────────┘
+### Prerequisites
 
-The architecture is intentionally modular so individual agents can be improved or replaced without redesigning the entire system.
+Install:
 
-# Features
--Multi-agent research architecture
+- Git
+- Node.js
+- npm
+- Python 3.12
 
--Research planning and task decomposition
+Clone the repository:
 
--Live web research
+```bash
+git clone https://github.com/Aanu777/deepresearch-ai.git
+cd deepresearch-ai
+```
 
--Source collection
+## Backend setup
 
--Research reflection
+Create and activate a virtual environment.
 
--Claim verification
+### Windows PowerShell
 
--Structured AI-generated reports
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
 
--Citation-oriented workflow
+Create:
 
--Research templates
+```text
+backend/.env
+```
 
--Interactive research pipeline visualization
+Required backend variables:
 
--Modern responsive interface
+```env
+TAVILY_API_KEY=
+OPENROUTER_API_KEY=
 
--Animated UI interactions
+SUPABASE_URL=
+SUPABASE_PUBLISHABLE_KEY=
 
-# Tech Stack
+PAYLOAD_PRIVATE_KEY_B64=
+PAYLOAD_ENCRYPTION_REQUIRED=true
 
-## Frontend
-Next.js
+DEEPGRAM_API_KEY=
+POLLINATIONS_API_KEY=
+```
 
-React
+Optional model/runtime overrides are defined in `backend/app/core/config.py`.
 
-TypeScript
+Start FastAPI:
 
-Tailwind CSS
+```powershell
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-Framer Motion
+Health check:
 
-Lucide Icons
+```text
+http://127.0.0.1:8000/health
+```
 
-## Backend
-Python
+## Frontend setup
 
-AI/LLM APIs
+Open another terminal:
 
-Web research infrastructure
+```powershell
+cd frontend
+npm install
+```
 
-Agent orchestration
+Create:
 
-# Project Structure
+```text
+frontend/.env.local
+```
 
-    deepresearch-ai/
-    │
-    ├── backend/
-    │   ├── ...
-    │   └── ...
-    │
-    ├── frontend/
-    │   ├── app/
-    │   ├── components/
-    │   │   ├── hero/
-    │   │   ├── layout/
-    │   │   ├── research/
-    │   │   ├── sections/
-    │   │   └── ui/
-    │   │
-    │   ├── public/
-    │   └── ...
-    │
-    ├── .gitignore
-    ├── README.md
-    └── ...
+Required frontend variables:
 
-```.``` The exact structure may evolve as the system develops.
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000/api/v1
 
-# Getting Started
-## Prerequisites
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 
-Make sure you have:
+NEXT_PUBLIC_PAYLOAD_PUBLIC_KEY_B64=
+```
 
-1.Node.js
-2.npm
-3.Python 3.x
-4.Git
+Start Next.js:
 
-# Clone the repository
-    git clone https://github.com/Aanu777/deepresearch-ai.git
-    cd deepresearch-ai
+```powershell
+npm run dev
+```
 
-# Frontend Setup
+Open:
 
-Navigate to the frontend:
+```text
+http://localhost:3000
+```
 
-    cd frontend
+## Production configuration
 
-Install dependencies:
+The production frontend is deployed on Vercel and the backend is deployed on FastAPI Cloud.
 
-    npm install
+The production frontend API variable is:
 
-Start the development server:
+```env
+NEXT_PUBLIC_API_URL=https://deepresearch-ai-cc22e7fc.fastapicloud.dev/api/v1
+```
 
-    npm run dev
+Do not commit API keys, private encryption keys, access tokens, or `.env` files.
 
-The frontend will then be available at:
+## Testing
 
-    http://localhost:3000
+### Deterministic AI regression suite
 
-# Backend Setup
+From the repository root:
 
-Navigate to the backend:
+```powershell
+python .\backend\scripts\run_evals.py
+```
 
-    cd backend
+Or:
 
-Create a virtual environment:
+```powershell
+cd backend
+python scripts\run_evals.py
+```
 
-    python -m venv .venv
+The regression suite covers areas including:
 
-Activate it on Windows:
+- provider output cleanup
+- code formatting
+- memory parsing
+- memory consolidation
+- source learning
+- conversation quality
+- code generation
+- private training-data preparation and export
 
-    .venv\Scripts\Activate.ps1
+### Frontend production build
 
-Install dependencies:
+```powershell
+cd frontend
+npm run build
+```
 
-    pip install -r requirements.txt
-    
-# Environment Variables
+## API surface
 
-Create your local environment file:
+Main FastAPI route groups:
 
-    backend/.env
+```text
+GET  /health
 
-Add the required API credentials there.
+/api/v1/conversations
+/api/v1/research
+/api/v1/memory
+/api/v1/training
+```
 
-Never commit ```.env``` files or API keys to GitHub.
+The authenticated application should be used for normal API interaction because protected AI routes use bearer authentication and encrypted payload transport.
 
-The repository is configured to keep environment secrets out of version control.
+## Private training data
 
-# Development
+Training examples are created only when a user explicitly opts in while submitting a correction.
 
-DeepResearch is designed to be developed incrementally.
+The Training workspace supports:
 
-A typical development workflow is:
+- viewing private samples
+- deleting individual samples
+- clearing the dataset
+- exporting SFT data
+- exporting preference data
 
-    Research Problem
-            ↓
-       Agent Design
-            ↓
-      Implementation
-            ↓
-       Integration
-            ↓
-         Testing
-            ↓
-        Evaluation
-            ↓
-        Iteration
+Training records are account-scoped with Supabase Row Level Security.
 
-Each agent should remain as independent as possible so that its behavior can be tested and improved separately.
+## Development principles
 
-# Design Principles
-## Modular
+### Modular
 
-Agents have clearly defined responsibilities.
+Research stages and services have narrow responsibilities and can evolve independently.
 
-## Transparent
+### Evidence-first
 
-The system should make the research process understandable rather than hiding everything behind a single response.
+Research output should stay connected to supporting sources and explicit verification steps.
 
-## Verifiable
+### Privacy-aware
 
-Important conclusions should be supported by evidence whenever possible.
+Learning data is user-scoped and correction capture requires explicit opt-in.
 
-## Extensible
+### Testable
 
-New agents, tools, models, and research strategies can be added without rebuilding the entire system.
+Behavior that can be made deterministic is covered by regression evaluations.
 
-## User-focused
+### Fail-safe
 
-The complexity of the underlying agent system should result in a simple research experience for the user.
+Optional adaptive-learning features should not prevent the core research/chat experience from functioning.
 
-# Current Status
+## Current release
 
-## DeepResearch v1 — Foundation Complete
+**DeepResearch AI — Phase 6 foundation**
 
-The current version establishes:
+The current stable release includes the complete controlled private training-data pipeline on top of the earlier memory, feedback, source-learning, and evaluation phases.
 
--The research-focused frontend
+Phase 7 model-training orchestration is intentionally **not part of the current release**.
 
--Multi-agent architecture
+## Deployment architecture
 
--Research pipeline visualization
+```text
+Browser
+   │
+   ├── Next.js frontend ────────────── Vercel
+   │
+   ├── Authentication ─────────────── Supabase Auth
+   │
+   └── Encrypted API requests
+              │
+              ▼
+        FastAPI backend ───────────── FastAPI Cloud
+              │
+              ├── LLMs ───────────── OpenRouter
+              ├── Search ─────────── Tavily
+              ├── Speech ─────────── Deepgram
+              ├── Images ─────────── Pollinations
+              └── User learning data ─ Supabase
+```
 
--Research templates
+## Author
 
--Core project structure
+**Aanu777**
 
--Initial AI research workflow
+GitHub: https://github.com/Aanu777
 
-The project is still under active development.
+---
 
-# Roadmap
-
-Future versions may explore:
-
- -Improved agent memory
- 
- -More advanced source ranking
- 
- -Better claim verification
- 
- -Parallel research execution
- 
- -Research progress tracking
- 
- -Persistent research sessions
- 
- -More advanced report generation
- 
- -Research history
- 
- -Evaluation benchmarks
- 
- -Production deployment
- 
- -Improved observability and agent tracing
- 
-DeepResearch started from a simple question:
-
-What happens when we treat AI research as a system instead of a single prompt?
-
-Rather than asking one model to perform every step, the project explores how specialized AI agents can collaborate to solve complex research problems.
-
-The long-term goal is to build a research system that is not only capable of producing answers, but can also explain how it arrived at them and why its conclusions should be trusted.
-
-# Author
-
-Aanu777
-
-GitHub:
-https://github.com/Aanu777
-
-
-
-
-
-
-
-
-    
+Built around a simple idea: important questions deserve a research process, not just a single prompt.
